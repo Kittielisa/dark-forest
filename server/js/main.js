@@ -107,7 +107,18 @@ var DarkForest = {
     }  ,
 
     closeUserFound : function(data){
-
+          //display position not accessible error
+        $( "#close-user-found" ).dialog({
+                modal: true, width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,               
+                buttons: {
+                Fight: function() {
+                  $( this ).dialog( "close" );
+                } , 
+                Peace: function() {
+                  $( this ).dialog( "close" );
+                } 
+              }
+          });
     },
     //draw the score, kills and total users
     drawStats : function(user){
@@ -167,7 +178,10 @@ window.onload = function(){
     socket.on('score update', function(data){
         console.log("score updated");
         if(data.id==User.id)
+        {
             User.increaseScore(data.score);
+            DarkForest.drawStats(User);
+        }
     });
 
     socket.on('close user found', function(data){

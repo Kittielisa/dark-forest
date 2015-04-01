@@ -29,7 +29,7 @@ io.on('connection' , function(socket){
 	        });
 
 	users.push({id:uniqueId , lat:0 , lon:0 , score:0});
-	sockets.push({id:uniqueId , socket:socket});
+	sockets.push({id:uniqueId , con:socket});
 
 	io.emit('new user' , {online : playerCount++});
 	socket.emit('welcome' , {id:uniqueId});
@@ -48,7 +48,7 @@ io.on('connection' , function(socket){
 			console.log(closeUser.id);
 			var closeUserSocket = getSocketById(closeUser.id);
 			socket.emit('close user found' , {id:closeUser.id , lat:closeUser.lat , lon:closeUser.lon , score:closeUser.score});
-			closeUserSocket.emit('close user found' , {id:users[i].id , lat:users[i].lat , lon:users[i].lon , score:users[i].score});
+			closeUserSocket.con.emit('close user found' , {id:users[i].id , lat:users[i].lat , lon:users[i].lon , score:users[i].score});
 		}
 		
 	})
@@ -109,7 +109,7 @@ function getSocketById(id){
     var count = sockets.length;
     var socket = null;
     for(var i=0;i<count;i++){
-      	if(users[i].id==id){
+      	if(sockets[i].id==id){
             socket = sockets[i];
             break;
         }
@@ -120,7 +120,7 @@ function getSocketById(id){
 function increaseScore(){
 	for(var i=0;i<users.length;i++){
 		users[i].score+=5;
-		sockets[i].socket.emit('score update' , {id:users[i].id , score:users[i].score});
+		sockets[i].con.emit('score update' , {id:users[i].id , score:users[i].score});
 	}
 }
 
