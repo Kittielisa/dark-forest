@@ -15,6 +15,7 @@ var User = {
 
 	newKill : function(bounty){
 		User.score+=bounty;
+		User.killed++;
 	}  ,
 
 	increaseScore : function(score){

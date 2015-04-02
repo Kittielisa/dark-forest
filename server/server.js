@@ -31,7 +31,7 @@ io.on('connection' , function(socket){
 	users.push({id:uniqueId , lat:0 , lon:0 , score:0});
 	sockets.push({id:uniqueId , con:socket});
 
-	io.emit('new user' , {online : playerCount++});
+	io.emit('new user' , {online : users.length-1});
 	socket.emit('welcome' , {id:uniqueId});
 
 	socket.on('location change' , function(data){
@@ -44,13 +44,57 @@ io.on('connection' , function(socket){
 		var closeUser = isClose();
 		if(closeUser==null)
 			return;
-		else{
+		else if(closeUser.id!=data.id){
 			console.log(closeUser.id);
 			var closeUserSocket = getSocketById(closeUser.id);
 			socket.emit('close user found' , {id:closeUser.id , lat:closeUser.lat , lon:closeUser.lon , score:closeUser.score});
 			closeUserSocket.con.emit('close user found' , {id:users[i].id , lat:users[i].lat , lon:users[i].lon , score:users[i].score});
 		}
 		
+	})
+	//if a user calls fight
+	socket.on('fight called' , function(data){
+		var caller_id = data.id;
+		var opponent_id = data.oppId;
+
+		var caller = getUserById(caller_id);
+		var opponent = getUserById(opponent_id);
+		console.log("fight called")
+		if(caller.score<opponent.score){
+			var caller_socket = getSocketById(caller_id);
+			var opp_socket = getSocketById(opponent_id);
+
+			caller_socket.con.emit('loss');
+			opp_socket.con.emit('win' , {score:caller.score});
+
+			opponent.score+=caller.score;
+
+			caller_socket.con.disconnect();
+			io.emit('user disconnect');
+			var index = users.indexOf(caller);
+			users.splice(index , 1);
+
+
+		}
+		else{
+			var caller_socket = getSocketById(caller_id);
+			var opp_socket = getSocketById(opponent_id);
+
+			opp_socket.con.emit('loss');
+			opp_socket.con.disconnect();
+			io.emit('user disconnect');
+			caller_socket.con.emit('win' , {score:caller.score});
+
+			caller.score+=opponent.score;
+
+			var index = users.indexOf(opponent);
+			users.splice(index , 1);
+		}
+	})
+
+	//if a user calls peace
+	socket.on('peace called' , function(data){
+
 	})
 
 })
@@ -119,9 +163,9 @@ function getSocketById(id){
 
 function increaseScore(){
 	for(var i=0;i<users.length;i++){
-		users[i].score+=5;
+		users[i].score+=1;
 		sockets[i].con.emit('score update' , {id:users[i].id , score:users[i].score});
 	}
 }
 
-setTimeout(increaseScore , 5000);
+setInterval(increaseScore , 1000);

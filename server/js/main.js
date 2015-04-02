@@ -84,7 +84,7 @@ var DarkForest = {
         if(err.code == 1) {
             //display the permission error
             $( "#error-permission" ).dialog({
-                modal: true, width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,
+                modal: true,closeOnEscape: false, width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,
                 buttons: {
                   Ok: function() {
                     $( this ).dialog( "close" );
@@ -96,7 +96,7 @@ var DarkForest = {
         }else if( err.code == 2) {
             //display position not accessible error
           $( "#error-postion" ).dialog({
-                  modal: true, width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,               
+                  modal: true, closeOnEscape: false,width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,               
                   buttons: {
                   Ok: function() {
                     $( this ).dialog( "close" );
@@ -109,17 +109,58 @@ var DarkForest = {
     closeUserFound : function(data){
           //display position not accessible error
         $( "#close-user-found" ).dialog({
-                modal: true, width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,               
+                modal: true, autoOpen: false, width: DarkForest.currentWidth -20,               
                 buttons: {
                 Fight: function() {
+                  console.log(data.id);
+                  console.log(data.oppId);
+                  socket.emit('fight called' , {id:data.id , oppId:data.oppId});
                   $( this ).dialog( "close" );
                 } , 
                 Peace: function() {
+                  console.log(data.id);
+                  console.log(data.oppId);
+                  socket.emit('peace called' , {id:data.id , oppId:data.oppId});
+                  $( this ).dialog( "close" );
+                } 
+              },
+              open: function(event, ui){
+                   setTimeout(function(){
+                           $('#close-user-found').dialog('close');                
+                       }, 3000);
+               }
+          });
+
+          $("#close-user-found").dialog( "open" )
+    },
+
+    win : function(data){
+          //display position not accessible error
+        $(".ui-dialog-content").dialog("close");
+        $( "#win-message" ).dialog({
+                modal: true, closeOnEscape: false, width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,               
+                buttons: {
+                Ok: function() {
                   $( this ).dialog( "close" );
                 } 
               }
           });
-    },
+    } ,
+
+    loss : function(data){
+          //display position not accessible error
+        $(".ui-dialog-content").dialog("close");
+        $( "#loss-message" ).dialog({
+                modal: true, closeOnEscape: false, width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,               
+                buttons: {
+                Ok: function() {
+                  $( this ).dialog( "close" );
+                } 
+              }
+          });
+    } ,
+
+
     //draw the score, kills and total users
     drawStats : function(user){
     	DarkForest.clearStats();
@@ -168,8 +209,8 @@ window.onload = function(){
 	});
 
 	//if a user leavers
-	socket.on('disconnect', function(data){
-		console.log("new user connected");
+	socket.on('user disconnect', function(data){
+		console.log("user disconnected");
 		User.userLeft();
 		DarkForest.drawStats(User);
 	});
@@ -185,9 +226,19 @@ window.onload = function(){
     });
 
     socket.on('close user found', function(data){
-        DarkForest.closeUserFound(data);
+        var ids = {id:User.id , oppId:data.id}
+        console.log(ids);
+        DarkForest.closeUserFound(ids);
     })
 
+    socket.on('loss' , function(data){
+        DarkForest.loss(data);
+    })
+
+    socket.on('win',function(data){
+        User.newKill(data.score);
+        DarkForest.win(data);
+    })
     
 
 
@@ -211,7 +262,7 @@ function getLocationUpdate(){
 
    if(navigator.geolocation){
       // timeout at 60000 milliseconds (60 seconds)
-      var options = {timeout:1000};
+      var options = {timeout:5000};
       geoLoc = navigator.geolocation;
       watchID = geoLoc.watchPosition(showLocation, 
                                      errorHandler,
