@@ -14,8 +14,9 @@ var playerCount = 0;
 var users = [];	//keep track of all the online users
 var sockets = [];
 var deciding_pairs = [];
+var idle_pairs = [];
 
-server.listen(server_port, server_ip_address, function () {
+server.listen(server_port, function () {
   console.log( "Listening on " + server_ip_address + ", server_port " + server_port )
 });
 
@@ -44,16 +45,16 @@ io.on('connection' , function(socket){
 		users[i].lon = data.lon;
 
 		var closeUser = isClose();
-		if(closeUser==null)
+		if(closeUser==null){
 			return;
-		else if(closeUser.id!=data.id){
+		}
+		else if(closeUser.id!=data.id && !idleUser(closeUser , users[i])){
 
 			var uniqueId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 			        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
 			        return v.toString(16);
 			    });
 
-			console.log(closeUser.id);
 			deciding_pairs.push({id:uniqueId , user1:users[i] , user1_status:"open" , user2:closeUser , user2_status:"open"});
 			var closeUserSocket = getSocketById(closeUser.id);
 			socket.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:closeUser.lat , lon:closeUser.lon , score:closeUser.score});
@@ -74,6 +75,9 @@ io.on('connection' , function(socket){
 		//console.log(pair);
 		if(pair!=null){
 			decideWinner(pair);
+			//remove the pair from deciding pairs
+			var index = deciding_pairs.indexOf(pair);
+			deciding_pairs.splice(index , 1);
 		}
 		/*
 		//the caller is stored as user1 in the pair
@@ -125,6 +129,12 @@ io.on('connection' , function(socket){
 			//if the other user chose to fight
 			if(pair.user2_status=="peace"){
 				makePeace(pair);
+				//remove the pair from deciding pairs
+				var index = deciding_pairs.indexOf(pair);
+				deciding_pairs.splice(index , 1);
+
+				idle_pairs.push(pair);
+
 			}
 			//else update the status of the caller in deciding_pairs
 			else{
@@ -140,6 +150,11 @@ io.on('connection' , function(socket){
 			//if the other user chose to fight
 			if(pair.user1_status=="peace"){
 				makePeace(pair);
+				//remove the pair from deciding pairs
+				var index = deciding_pairs.indexOf(pair);
+				deciding_pairs.splice(index , 1);
+
+				idle_pairs.push(pair);
 			}
 			//else update the status of the caller in deciding_pairs
 			else{
@@ -224,6 +239,21 @@ function makePeace(pair){
 
 }
 
+function idleUser(user1 , user2){
+	console.log('idle user called');
+	console.log(user1.id);
+	console.log(user2.id);
+	for(var i=0;i<idle_pairs.length;i++){
+		if(idle_pairs[i].user1==user1 && idle_pairs[i].user2==user2){
+			return true;
+		}
+		else if(idle_pairs[i].user1==user2 && idle_pairs[i].user2==user1){
+			return true;
+		}
+	}
+	return false;
+}
+
 function chooseTechExplosion()
 {
 	if(users.length<=0)
@@ -233,7 +263,7 @@ function chooseTechExplosion()
 	users[winner].score+=5;
     var winner_socket = getSocketById(users[winner].id);
 	winner_socket.con.emit('tech explosion');
-	console.log("tech explosion called");
+	//console.log("tech explosion called");
     
 }
 
@@ -242,7 +272,7 @@ function isClose(){
 	for(var i=0;i<users.length;i++){
 		for(var k=0;k<users.length && k!=i;k++){
 			var d = distance(users[k].lat , users[k].lon , users[i].lat , users[i].lon);
-			if(d<10)
+			if(d<10 && !idleUser(users[k] , users[i]))
 			{
 				closeUser= users[k];
 				break;

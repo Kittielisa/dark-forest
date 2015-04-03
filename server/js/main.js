@@ -117,6 +117,7 @@ var DarkForest = {
                 } , 
                 Peace: function() {
                   socket.emit('peace called' , {id:data.id , callId:data.myId ,  oppId:data.oppId});
+                  console.log('peace called')
                   $( this ).dialog( "close" );
                 } 
               }
@@ -194,7 +195,7 @@ var DarkForest = {
 var socket ;
 window.onload = function(){
 	//connect to the server
-    socket = io.connect('http://127.0.0.1:3000');
+    socket = io.connect('/');
 
 	//receive your random id from server
     socket.on('welcome',function(data){
@@ -219,7 +220,6 @@ window.onload = function(){
 
     //periodically receive score updates
     socket.on('score update', function(data){
-        console.log("score updated");
         if(data.id==User.id)
         {
             User.increaseScore(data.score);
