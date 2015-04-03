@@ -109,30 +109,33 @@ var DarkForest = {
     closeUserFound : function(data){
           //display position not accessible error
         $( "#close-user-found" ).dialog({
-                modal: true, autoOpen: false, width: DarkForest.currentWidth -20,               
+                modal: true, width: DarkForest.currentWidth -20,               
                 buttons: {
                 Fight: function() {
-                  console.log(data.id);
-                  console.log(data.oppId);
-                  socket.emit('fight called' , {id:data.id , oppId:data.oppId});
+                  socket.emit('fight called' , {id:data.id , callId:data.myId ,  oppId:data.oppId});
                   $( this ).dialog( "close" );
                 } , 
                 Peace: function() {
-                  console.log(data.id);
-                  console.log(data.oppId);
-                  socket.emit('peace called' , {id:data.id , oppId:data.oppId});
+                  socket.emit('peace called' , {id:data.id , callId:data.myId ,  oppId:data.oppId});
                   $( this ).dialog( "close" );
                 } 
-              },
-              open: function(event, ui){
-                   setTimeout(function(){
-                           $('#close-user-found').dialog('close');                
-                       }, 3000);
-               }
+              }
           });
 
-          $("#close-user-found").dialog( "open" )
     },
+
+    peace: function(data){
+          //display position not accessible error
+        $(".ui-dialog-content").dialog("close");
+        $( "#peace-message" ).dialog({
+                modal: true, closeOnEscape: false, width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,               
+                buttons: {
+                Ok: function() {
+                  $( this ).dialog( "close" );
+                } 
+              }
+          });
+    } ,
 
     win : function(data){
           //display position not accessible error
@@ -173,7 +176,6 @@ var DarkForest = {
     } ,
     //if the user receives a tech explosion bonus
     receivedTechExplosion : function(){
-        User.increaseScore(5);
         $( "#tech-explosion" ).dialog({
             modal: true, width: DarkForest.currentWidth -20,show: { effect: "blind", duration: 800 } ,               
             buttons: {
@@ -226,7 +228,7 @@ window.onload = function(){
     });
 
     socket.on('close user found', function(data){
-        var ids = {id:User.id , oppId:data.id}
+        var ids = {id:data.id , myId:User.id , oppId:data.oppId}
         console.log(ids);
         DarkForest.closeUserFound(ids);
     })
@@ -238,6 +240,16 @@ window.onload = function(){
     socket.on('win',function(data){
         User.newKill(data.score);
         DarkForest.win(data);
+    });
+
+    socket.on('peace' , function(data){
+        DarkForest.peace(data);
+    })
+
+    socket.on('tech explosion' , function(data){
+        User.increaseScore(5);
+        DarkForest.drawStats(User);
+        DarkForest.receivedTechExplosion(data);
     })
     
 
