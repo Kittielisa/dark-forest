@@ -1,14 +1,21 @@
 var app = require('express')();
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
+var cookieParser = require('cookie-parser')
 
 var server_port = process.env.PORT || 3000
 var server_ip_address = process.env.IP || '127.0.0.1'
 
+app.use(cookieParser())
+
+
 app.get('/*.*' , function(req , res , next){
     var fileName = req.path;
+    res.cookie('user' , 'true' , {httpOnly: false });
     res.sendFile(__dirname +'/'+ fileName);
 })
+
+
 
 var playerCount = 0;
 var users = [];	//keep track of all the online users
@@ -24,7 +31,18 @@ server.listen(server_port, function () {
 //socket.io code to handle multiple users
 io.on('connection' , function(socket){
 	console.log("new user connected");
-
+	/*var user_cookie = socket.handshake.headers.cookie.split(';');
+	for (var i = user_cookie.length - 1; i >= 0; i--) {
+    	var name = user_cookie[i].split('=')[0];
+    	var value = user_cookie[i].split('=')[1];
+    	console.log(name);
+    	console.log(value)
+    	if(name==' user' && value=='true')
+    		valid = true;
+    };
+    if(!valid){
+    	
+    }*/
 	var uniqueId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 	            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
 	            return v.toString(16);
@@ -33,32 +51,53 @@ io.on('connection' , function(socket){
 
 	users.push({id:uniqueId , lat:0 , lon:0 , score:0});
 	sockets.push({id:uniqueId , con:socket});
-
 	io.emit('new user' , {online : users.length-1});
 	socket.emit('welcome' , {id:uniqueId});
+
+	socket.on('disconnect',function(data){
+		var disconnect_user = getUserById(uniqueId);
+		var disconnect_socket = getSocketById(uniqueId);
+
+		var index = users.indexOf(disconnect_user);
+		users.splice(index , 1);
+		index = sockets.indexOf(disconnect_socket);
+		sockets.splice(index,1);
+
+		io.emit('user disconnected');
+		socket.disconnect();
+	})
 
 	socket.on('location change' , function(data){
 		console.log("location change received")
 		var user = getUserById(data.id);
-		var i = users.indexOf(user);
-		users[i].lat = data.lat;
-		users[i].lon = data.lon;
+		var index = users.indexOf(user);
+		users[index].lat = data.lat;
+		users[index].lon = data.lon;
+		//console.log(users[i]);
+		var closeUser = isClose(users[index]);
 
-		var closeUser = isClose();
 		if(closeUser==null){
 			return;
 		}
-		else if(closeUser.id!=data.id && !idleUser(closeUser , users[i])){
+		else if(closeUser.id!=data.id && !idleUser(closeUser , users[index]) ){
+			var exist = false;
+			for (var i = deciding_pairs.length - 1; i >= 0; i--) {
+				if(deciding_pairs[i].user1==closeUser && deciding_pairs[i].user2==users[index] || deciding_pairs[i].user2==closeUser && deciding_pairs[i].user1==users[index])
+					exist = true;
+			};
+			if(!exist){
+				var uniqueId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+				        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
+				        return v.toString(16);
+				    });
 
-			var uniqueId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-			        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
-			        return v.toString(16);
-			    });
-
-			deciding_pairs.push({id:uniqueId , user1:users[i] , user1_status:"open" , user2:closeUser , user2_status:"open"});
-			var closeUserSocket = getSocketById(closeUser.id);
-			socket.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:closeUser.lat , lon:closeUser.lon , score:closeUser.score});
-			closeUserSocket.con.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:users[i].lat , lon:users[i].lon , score:users[i].score});
+				deciding_pairs.push({id:uniqueId , user1:users[index] , user1_status:"open" , user2:closeUser , user2_status:"open"});
+				var closeUserSocket = getSocketById(closeUser.id);
+				console.log(users[index]);
+				socket.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:closeUser.lat , lon:closeUser.lon , score:closeUser.score});
+				closeUserSocket.con.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:users[index].lat , lon:users[index].lon , score:users[index].score});
+			}
+			
 		}
 		
 	})
@@ -122,10 +161,11 @@ io.on('connection' , function(socket){
 		console.log("peace called")
 
 		var pair = getDecidingPairById(data.id);
-		//console.log(pair);
+
 		
 		//the caller is stored as user1 in the pair
 		if(pair.user1.id==caller_id){
+			console.log(pair)
 			//if the other user chose to fight
 			if(pair.user2_status=="peace"){
 				makePeace(pair);
@@ -141,12 +181,12 @@ io.on('connection' , function(socket){
 				var index = deciding_pairs.indexOf(pair);
 				deciding_pairs.splice(index , 1);
 				deciding_pairs.push({id:pair.id , user1:pair.user1 , user1_status:"peace" , user2:pair.user2 , user2_status:pair.user2_status});
-				//console.log(deciding_pairs);
 			}
 
 		}
 		//the caller is stored as user2
 		else if(pair.user2.id==caller_id){
+			console.log(pair)
 			//if the other user chose to fight
 			if(pair.user1_status=="peace"){
 				makePeace(pair);
@@ -204,8 +244,7 @@ function decideWinner(pair){
 
 		caller_socket.con.disconnect();
 		
-		var index = users.indexOf(caller);
-		users.splice(index , 1);
+		
 
 	}
 	else{
@@ -219,8 +258,7 @@ function decideWinner(pair){
 
 		caller.score+=opponent.score;
 
-		var index = users.indexOf(opponent);
-		users.splice(index , 1);
+		
 	}
 }
 
@@ -240,9 +278,6 @@ function makePeace(pair){
 }
 
 function idleUser(user1 , user2){
-	console.log('idle user called');
-	console.log(user1.id);
-	console.log(user2.id);
 	for(var i=0;i<idle_pairs.length;i++){
 		if(idle_pairs[i].user1==user1 && idle_pairs[i].user2==user2){
 			return true;
@@ -267,18 +302,17 @@ function chooseTechExplosion()
     
 }
 
-function isClose(){
+function isClose(user){
 	var closeUser = null;
-	for(var i=0;i<users.length;i++){
-		for(var k=0;k<users.length && k!=i;k++){
-			var d = distance(users[k].lat , users[k].lon , users[i].lat , users[i].lon);
-			if(d<10 && !idleUser(users[k] , users[i]))
+	for(var k=0;k<users.length ;k++){
+			var d = distance(users[k].lat , users[k].lon , user.lat , user.lon);
+			if(d<10 && !idleUser(users[k] , user) && users[k]!=user)
 			{
 				closeUser= users[k];
 				break;
 			}
 		}		
-	}
+
 	return closeUser;
 }
 
@@ -327,7 +361,17 @@ function increaseScore(){
 		sockets[i].con.emit('score update' , {id:users[i].id , score:users[i].score});
 	}
 }
-
+//remove idle pairs if the distance between them increase by 50m
+function checkIdlePairs(){
+	for (var i = idle_pairs.length - 1; i >= 0; i--) {
+		if(distance(idle_pairs[i].user1.lat , idle_pairs[i].user1.lon , idle_pairs[i].user2.lat , idle_pairs[i].user2.lon)>50)
+		{
+			console.log('idle pair removed');
+			idle_pairs.splice(i,1);
+		}
+	};
+}
 setInterval(chooseTechExplosion, 60000);
 setInterval(increaseScore , 1000);
+//setInterval(checkIdlePairs , 5000);
 //setInterval(increaseScore , 2000);
