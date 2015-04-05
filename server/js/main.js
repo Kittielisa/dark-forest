@@ -55,6 +55,11 @@ var DarkForest = {
         var i;
         // spawn a new instance of Touch
         // if the user has tapped the screen
+        if(DarkForest.menu.active){
+          console.log("full screen exited")
+          DarkForest.entities.push(new DarkForest.menu());
+          DarkForest.menu.active = false;
+        }
         if (DarkForest.Input.tapped) {
             DarkForest.entities.push(new DarkForest.Touch(DarkForest.Input.x, DarkForest.Input.y));
             // set tapped back to false
@@ -65,9 +70,9 @@ var DarkForest = {
         if(DarkForest.ExitFullScreen.active){
           var d = new DarkForest.ExitFullScreen('Exit Fullscreen',220 , 15 , 100 , 20 , '#9100EC');
           d.handler = function(){
-            alert("Exit full screen");
             DarkForest.isFullScreen = !DarkForest.isFullScreen;
-            console.log('exit')
+            DarkForest.menu.active = true;
+            console.log(DarkForest.isFullScreen);
           }
           DarkForest.entities.push(d)
  
@@ -766,6 +771,271 @@ DarkForest.ExitFullScreen = function(text,x,y,width,height , col){
   }
 }
 
+DarkForest.Contact = function(parent , text,x,y,width,height , col){
+  this.x = x;
+  this.y = y;
+  this.width = width;
+  this.height = height;
+  this.clicked = false;
+  this.hovered = false;
+  this.text = text;
+  /*this.handler = function(){
+      //this.timesClicked++;
+      alert("This button has been clicked " + this.timesClicked + " time(s)!");
+  };*/
+  this.intersects = function(obj, mouse) {
+        var t = 5; //tolerance
+        if(mouse==null)
+          return;
+        //console.log(obj)
+        var xIntersect = (mouse.x + t) > obj.x && (mouse.x - t) <  obj.x + obj.width;
+        var yIntersect = (mouse.y + t) > obj.y && (mouse.y - t) <  obj.y + obj.height;
+        //DarkForest.mouse = null;
+        return  xIntersect && yIntersect;
+    }
+
+  this.updateStats = function(canvas){
+        if (this.intersects(this, DarkForest.mouse)) {
+            this.hovered = true;
+            if (DarkForest.mouse.clicked) {
+                this.clicked = true;
+            }
+        } else {
+            this.hovered = false;
+        }
+
+        if (!DarkForest.mouse.down) {
+            this.clicked = false;
+        }               
+    }
+
+  this.update = function(){
+    var wasNotClicked = !this.clicked;
+    this.updateStats(DarkForest.ctx);
+    if(this.y>DarkForest.height-100 && !parent.remove)
+      this.y-=20;
+    if(parent.remove)
+      this.y+=20
+    if(this.y>DarkForest.height+10)
+      this.remove = true;
+    if (this.clicked && wasNotClicked) {
+      console.log("click")
+        this.handler()
+    }
+  }
+  this.render = function(){
+    
+    //draw button
+    DarkForest.ctx.fillStyle = col;
+    DarkForest.ctx.fillRect(this.x, this.y, this.width, this.height);
+
+    //text options
+    var fontSize = 14;
+    DarkForest.ctx.font = fontSize + "px sans-serif";
+
+    //text position
+    var textSize = DarkForest.ctx.measureText(this.text);
+    var textX = this.x + (this.width/2) - (textSize.width / 2);
+    var textY = this.y + (this.height/2) + fontSize/3;
+
+    //draw the text
+    DarkForest.ctx.fillStyle = 'white';
+    DarkForest.ctx.fillText(this.text, textX, textY);
+    //console.log(alertButton);
+  }
+}
+
+DarkForest.Credits = function(parent , text,x,y,width,height , col){
+  this.x = x;
+  this.y = y;
+  this.width = width;
+  this.height = height;
+  this.clicked = false;
+  this.hovered = false;
+  this.text = text;
+  /*this.handler = function(){
+      //this.timesClicked++;
+      alert("This button has been clicked " + this.timesClicked + " time(s)!");
+  };*/
+  this.intersects = function(obj, mouse) {
+        var t = 5; //tolerance
+        if(mouse==null)
+          return;
+        //console.log(obj)
+        var xIntersect = (mouse.x + t) > obj.x && (mouse.x - t) <  obj.x + obj.width;
+        var yIntersect = (mouse.y + t) > obj.y && (mouse.y - t) <  obj.y + obj.height;
+        //DarkForest.mouse = null;
+        return  xIntersect && yIntersect;
+    }
+
+  this.updateStats = function(canvas){
+        if (this.intersects(this, DarkForest.mouse)) {
+            this.hovered = true;
+            if (DarkForest.mouse.clicked) {
+                this.clicked = true;
+            }
+        } else {
+            this.hovered = false;
+        }
+
+        if (!DarkForest.mouse.down) {
+            this.clicked = false;
+        }               
+    }
+
+  this.update = function(){
+    var wasNotClicked = !this.clicked;
+    this.updateStats(DarkForest.ctx);
+    if(this.y>DarkForest.height-65 && !parent.remove)
+      this.y-=13;
+    if(parent.remove)
+      this.y+=13
+    if(this.y>DarkForest.height+10)
+      this.remove = true;
+    if (this.clicked && wasNotClicked) {
+      console.log("click")
+        this.handler()
+    }
+  }
+  this.render = function(){
+    
+    
+    //draw button
+    DarkForest.ctx.fillStyle = col;
+    DarkForest.ctx.fillRect(this.x, this.y, this.width, this.height);
+
+    //text options
+    var fontSize = 14;
+    DarkForest.ctx.font = fontSize + "px sans-serif";
+
+    //text position
+    var textSize = DarkForest.ctx.measureText(this.text);
+    var textX = this.x + (this.width/2) - (textSize.width / 2);
+    var textY = this.y + (this.height/2) + fontSize/3;
+
+    //draw the text
+    DarkForest.ctx.fillStyle = 'white';
+    DarkForest.ctx.fillText(this.text, textX, textY);
+    //console.log(alertButton);
+  }
+}
+
+DarkForest.Story = function(parent , text,x,y,width,height , col){
+  this.x = x;
+  this.y = y;
+  this.width = width;
+  this.height = height;
+  this.clicked = false;
+  this.hovered = false;
+  this.text = text;
+  /*this.handler = function(){
+      //this.timesClicked++;
+      alert("This button has been clicked " + this.timesClicked + " time(s)!");
+  };*/
+  this.intersects = function(obj, mouse) {
+        var t = 5; //tolerance
+        if(mouse==null)
+          return;
+        //console.log(obj)
+        var xIntersect = (mouse.x + t) > obj.x && (mouse.x - t) <  obj.x + obj.width;
+        var yIntersect = (mouse.y + t) > obj.y && (mouse.y - t) <  obj.y + obj.height;
+        //DarkForest.mouse = null;
+        return  xIntersect && yIntersect;
+    }
+
+  this.updateStats = function(canvas){
+        if (this.intersects(this, DarkForest.mouse)) {
+            this.hovered = true;
+            if (DarkForest.mouse.clicked) {
+                this.clicked = true;
+            }
+        } else {
+            this.hovered = false;
+        }
+
+        if (!DarkForest.mouse.down) {
+            this.clicked = false;
+        }               
+    }
+
+  this.update = function(){
+    var wasNotClicked = !this.clicked;
+    this.updateStats(DarkForest.ctx);
+    if(parent.remove)
+      this.y+=5
+    if(this.y>DarkForest.height+10)
+      this.remove = true;
+    if(this.y>DarkForest.height-30 && !parent.remove)
+      this.y-=5;
+    
+    if (this.clicked && wasNotClicked) {
+      console.log("click")
+        this.handler()
+    }
+  }
+  this.render = function(){
+    
+    
+    //draw button
+    DarkForest.ctx.fillStyle = col;
+    DarkForest.ctx.fillRect(this.x, this.y, this.width, this.height);
+
+    //text options
+    var fontSize = 14;
+    DarkForest.ctx.font = fontSize + "px sans-serif";
+
+    //text position
+    var textSize = DarkForest.ctx.measureText(this.text);
+    var textX = this.x + (this.width/2) - (textSize.width / 2);
+    var textY = this.y + (this.height/2) + fontSize/3;
+
+    //draw the text
+    DarkForest.ctx.fillStyle = 'white';
+    DarkForest.ctx.fillText(this.text, textX, textY);
+    //console.log(alertButton);
+  }
+}
+
+DarkForest.menu = function(){
+  this.time = 0;
+  this.active = false;
+  this.remove = false;
+  var self = this;
+  this.update = function(){
+      this.time++;
+      if(DarkForest.isFullScreen){
+        this.remove=true;
+      }
+  }
+  this.render = function() {
+    
+    //Create the buttons
+    if(this.time<3){
+      var contact = new DarkForest.Contact(self , "Contact" , 0 , DarkForest.height , DarkForest.width , 30 , 'green');
+      contact.handler = function(){
+        
+      }
+      DarkForest.entities.push(contact);
+
+      var story = new DarkForest.Story( self , "Story" , 0 , DarkForest.height , DarkForest.width , 30 , 'green');
+      story.hanlder = function(){
+
+      }
+      DarkForest.entities.push(story);
+
+      var credits = new DarkForest.Credits(self , "Credits" , 0 , DarkForest.height, DarkForest.width , 30 , 'green');
+      credits.handler = function(){
+
+      }
+      DarkForest.entities.push(credits);
+
+    }
+    
+    //paint_centered_wrap(DarkForest.canvas, 20, DarkForest.height/4, DarkForest.width-40, DarkForest.height/4, "You are in a war with civilization #002, please choose your next move.", 12, 2);
+
+  };
+}
+
 //this goes at the start of the program
 // to track players's progress
 DarkForest.score = {
@@ -861,7 +1131,7 @@ function getLocationUpdate(){
 
    if(navigator.geolocation){
       // timeout at 60000 milliseconds (60 seconds)
-      var options = {timeout:5000};
+      var options = {enableHighAccuracy:true , timeout:5000};
       geoLoc = navigator.geolocation;
       watchID = geoLoc.watchPosition(showLocation, 
                                      errorHandler,
