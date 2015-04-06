@@ -50,7 +50,7 @@ io.on('connection' , function(socket){
 	        });
 
 	users.push({id:uniqueId , lat:0 , lon:0 , score:0});
-	sockets.push({id:uniqueId , con:socket});
+	sockets.push({id:uniqueId , con:socket , status:'open'});
 	io.emit('new user' , {online : users.length-1});
 	socket.emit('welcome' , {id:uniqueId});
 
@@ -65,6 +65,16 @@ io.on('connection' , function(socket){
 
 		io.emit('user disconnected');
 		socket.disconnect();
+	})
+
+	socket.on('pause' , function(data){
+		var s = sockets.indexOf(socket);
+		sockets[s].status = 'pause';
+	})
+
+	socket.on('unpause' , function(data){
+		var s = sockets.indexOf(socket);
+		sockets[s].status = 'open';
 	})
 
 	socket.on('location change' , function(data){
@@ -93,7 +103,6 @@ io.on('connection' , function(socket){
 
 				deciding_pairs.push({id:uniqueId , user1:users[index] , user1_status:"open" , user2:closeUser , user2_status:"open"});
 				var closeUserSocket = getSocketById(closeUser.id);
-				console.log(users[index]);
 				socket.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:closeUser.lat , lon:closeUser.lon , score:closeUser.score});
 				closeUserSocket.con.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:users[index].lat , lon:users[index].lon , score:users[index].score});
 			}
@@ -118,37 +127,7 @@ io.on('connection' , function(socket){
 			var index = deciding_pairs.indexOf(pair);
 			deciding_pairs.splice(index , 1);
 		}
-		/*
-		//the caller is stored as user1 in the pair
-		if(pair.user1.id==caller_id){
-			//if the other user chose to fight
-			if(pair.user2.status=="fight"){
-				decideWinner(pair);
-			}
-			//else update the status of the caller in deciding_pairs
-			else{
-				var index = deciding_pairs.indexOf(pair);
-				deciding_pairs.splice(index , 1);
-				deciding_pairs.push({id:pair.id , user1:pair.user1 , user1_status:"fight" , user2:pair.user2 , user2_status:pair.user2_status});
-				console.log(deciding_pairs);
-			}
-
-		}
-		//the caller is stored as user2
-		else if(pair.user2.id==caller_id){
-			//if the other user chose to fight
-			if(pair.user1.status=="fight"){
-				decideWinner(pair);
-			}
-			//else update the status of the caller in deciding_pairs
-			else{
-				var index = deciding_pairs.indexOf(pair);
-				deciding_pairs.splice(index , 1);
-				deciding_pairs.push({id:pair.id , user1:pair.user1 , user1_status:pair.user1_status , user2:pair.user2 , user2_status:"fight"});
-				console.log(deciding_pairs);
-			}
-		}*/
-		
+			
 	})
 
 	//if a user calls peace
@@ -165,7 +144,6 @@ io.on('connection' , function(socket){
 		
 		//the caller is stored as user1 in the pair
 		if(pair.user1.id==caller_id){
-			console.log(pair)
 			//if the other user chose to fight
 			if(pair.user2_status=="peace"){
 				makePeace(pair);
@@ -186,7 +164,6 @@ io.on('connection' , function(socket){
 		}
 		//the caller is stored as user2
 		else if(pair.user2.id==caller_id){
-			console.log(pair)
 			//if the other user chose to fight
 			if(pair.user1_status=="peace"){
 				makePeace(pair);

@@ -1,9 +1,9 @@
 var currentOpponents;
 
 var DarkForest = {
-	width : 320 ,
-	height : 480 ,
-	// we'll set the rest of these
+  width : 320 ,
+  height : 480 ,
+  // we'll set the rest of these
     // in the init function
     ratio:  null,
     currentWidth:  null,
@@ -24,7 +24,7 @@ var DarkForest = {
 
 
     init : function(){
-    	// the proportion of width to height
+      // the proportion of width to height
         DarkForest.ratio = DarkForest.width / DarkForest.height;
         // these will change when the screen is resized
         DarkForest.currentWidth = DarkForest.width;
@@ -173,19 +173,19 @@ var DarkForest = {
 
     resize: function() {
 
-    		//if full screen is not active, leave some place below the canvas for buttons
-    		if(DarkForest.isFullScreen==false){
-    			DarkForest.currentHeight = window.innerHeight - window.innerHeight/6;
-    			// resize the width in proportion
-    			// to the new height
-    			DarkForest.currentWidth = window.innerHeight * DarkForest.ratio;
+        //if full screen is not active, leave some place below the canvas for buttons
+        if(DarkForest.isFullScreen==false){
+          DarkForest.currentHeight = window.innerHeight - window.innerHeight/6;
+          // resize the width in proportion
+          // to the new height
+          DarkForest.currentWidth = window.innerHeight * DarkForest.ratio;
 
-    		}else{
-    			DarkForest.currentHeight = window.innerHeight;
-    			// resize the width in proportion
-    			// to the new height
-    			DarkForest.currentWidth = DarkForest.currentHeight * DarkForest.ratio;
-    		}
+        }else{
+          DarkForest.currentHeight = window.innerHeight;
+          // resize the width in proportion
+          // to the new height
+          DarkForest.currentWidth = DarkForest.currentHeight * DarkForest.ratio;
+        }
 
             
 
@@ -269,7 +269,7 @@ DarkForest.Input = {
         console.log(DarkForest.mouse)
        // DarkForest.mouse.down = (data.which == 1);
        // DarkForest.mouse.clicked = (data.which == 1 && !DarkForest.mouse.down);
-        DarkForest.Draw.circle(this.x, this.y, 10, 'red');
+        //DarkForest.Draw.circle(this.x, this.y, 10, 'red');
     }
 
 };
@@ -652,6 +652,7 @@ DarkForest.PeaceButton = function(parent , text,x,y,width,height , col){
   this.updateStats = function(canvas){
         if (this.intersects(this, DarkForest.mouse)) {
             this.hovered = true;
+            console.log(DarkForest.mouse)
             if (DarkForest.mouse.clicked) {
                 this.clicked = true;
             }
@@ -709,10 +710,7 @@ DarkForest.ExitFullScreen = function(text,x,y,width,height , col){
   this.clicked = false;
   this.hovered = false;
   this.text = text;
-  /*this.handler = function(){
-      //this.timesClicked++;
-      alert("This button has been clicked " + this.timesClicked + " time(s)!");
-  };*/
+  
   this.intersects = function(obj, mouse) {
         var t = 5; //tolerance
         if(mouse==null)
@@ -1013,7 +1011,7 @@ DarkForest.menu = function(){
     if(this.time<3){
       var contact = new DarkForest.Contact(self , "Contact" , 0 , DarkForest.height , DarkForest.width , 30 , 'green');
       contact.handler = function(){
-        
+        alert("contact")
       }
       DarkForest.entities.push(contact);
 
@@ -1047,29 +1045,29 @@ DarkForest.score = {
 
 var socket ;
 window.onload = function(){
-	//connect to the server
+  //connect to the server
     socket = io.connect('/');
 
-	//receive your random id from server
+  //receive your random id from server
     socket.on('welcome',function(data){
         User.id = data.id;
         console.log(User.id);
     })
     //if a new user arrives
-	socket.on('new user',function(data){
-		console.log("new user connected");
-		User.newUser(data.online);
-		DarkForest.score.totalOnline=++data.online;
+  socket.on('new user',function(data){
+    console.log("new user connected");
+    User.newUser(data.online);
+    DarkForest.score.totalOnline=++data.online;
     getLocationUpdate();
 
-	});
+  });
 
-	//if a user leavers
-	socket.on('user disconnected', function(data){
-		console.log("user disconnected");
-		User.userLeft();
-	  DarkForest.score.totalOnline--;
-	});
+  //if a user leavers
+  socket.on('user disconnected', function(data){
+    console.log("user disconnected");
+    User.userLeft();
+    DarkForest.score.totalOnline--;
+  });
 
     //periodically receive score updates
     socket.on('score update', function(data){
@@ -1153,6 +1151,15 @@ window.addEventListener("mousedown", function(e) {
     console.log("mousedown")
     DarkForest.mouse.clicked = !DarkForest.mouse.down;
     DarkForest.mouse.down = true;
+});
+
+window.addEventListener("mousemove", function(e) {
+    //DarkForest.mouse.x = e.offsetX;
+    //DarkForest.mouse.y = e.offsetY;
+    e.preventDefault();
+    DarkForest.Input.set(e);
+    DarkForest.mouse.clicked = (e.which == 1 && !DarkForest.mouse.down);
+    DarkForest.mouse.down = (e.which == 1);
 });
 
 window.addEventListener("mouseup", function(e) {
