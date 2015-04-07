@@ -1,6 +1,13 @@
 var currentOpponents;
+var cntct=0;
+var stry=0;
+var crdts=0;
+var firstTime = true;
+var enemy=false;
+
 
 var DarkForest = {
+	
   width : 320 ,
   height : 480 ,
   // we'll set the rest of these
@@ -55,6 +62,14 @@ var DarkForest = {
         var i;
         // spawn a new instance of Touch
         // if the user has tapped the screen
+		
+		if(firstTime){
+			DarkForest.entities.push(new DarkForest.Particle());
+			DarkForest.entities.push(new DarkForest.Radar());
+			firstTime = false;
+		}
+		
+		
         if(DarkForest.menu.active){
           console.log("full screen exited")
           DarkForest.entities.push(new DarkForest.menu());
@@ -68,8 +83,11 @@ var DarkForest = {
             DarkForest.Input.tapped = false;
         }
         if(DarkForest.ExitFullScreen.active){
-          var d = new DarkForest.ExitFullScreen('Exit Fullscreen',220 , 15 , 100 , 20 , '#9100EC');
+          var d = new DarkForest.ExitFullScreen('MENU',220 , 15 , 100 , 20 , '#9100EC');
           d.handler = function(){
+    		  crdts=0;
+    		  stry=0;
+    		  cntct=0;
             DarkForest.isFullScreen = !DarkForest.isFullScreen;
             DarkForest.menu.active = true;
             console.log(DarkForest.isFullScreen);
@@ -129,16 +147,7 @@ var DarkForest = {
            DarkForest.entities.push(closeUserFound);
            DarkForest.CloseUserFound.active = false;
         }
-        // spawn an explosion
-        for (var n = 0; n < 1; n +=1 ) {
-            DarkForest.entities.push(new DarkForest.Particle(
-                Math.random()*DarkForest.width, 
-                Math.random()*DarkForest.height, 
-                2, 
-                // random opacity to spice it up a bit
-                'rgba(255,255,255,'+Math.random()*1+')'
-            )); 
-        }
+        
     },
 
     // this is where we draw all the entities
@@ -202,12 +211,7 @@ var DarkForest = {
             DarkForest.canvas.style.width = DarkForest.currentWidth + 'px';
             DarkForest.canvas.style.height = DarkForest.currentHeight + 'px';
 
-            //adjust buttons according to canvas width
-            document.getElementById('contact-button').width = DarkForest.currentWidth;
-            document.getElementById('story-button').width = DarkForest.currentWidth;
-            document.getElementById('credits-button').width = DarkForest.currentWidth;
-
-            
+                        
             // we use a timeout here because some mobile
             // browsers don't fire if there is not
             // a short delay
@@ -298,81 +302,6 @@ DarkForest.Touch = function(x, y) {
 
 };
 
-DarkForest.Bubble = function() {
-
-    this.type = 'bubble';
-    this.x = 100;
-    this.r = 5;                // the radius of the bubble
-    this.y = DarkForest.height + 100; // make sure it starts off screen
-    this.remove = false;
-
-    this.update = function() {
-
-        // move up the screen by 1 pixel
-        this.y -= 1;
-
-        // if off screen, flag for removal
-        if (this.y < -10) {
-            this.remove = true;
-        }
-
-    };
-
-    this.render = function() {
-
-        DarkForest.Draw.circle(this.x, this.y, this.r, 'rgba(255,255,255,1)');
-    };
-
-};
-
-DarkForest.Particle = function(x, y,r, col) {
-
-    this.x = x;
-    this.y = y;
-    this.r = r;
-    this.col = col;
-
-    // determines whether particle will
-    // travel to the right of left
-    // 50% chance of either happening
-    this.dir = (Math.random() * 2 > 1) ? 1 : -1;
-
-    // random values so particles do not
-    // travel at the same speeds
-    this.vx = ~~(Math.random() * 4) * this.dir;
-    this.vy = ~~(Math.random() * 7);
-
-    this.remove = false;
-
-    this.update = function() {
-
-        // update coordinates
-        this.x += this.vx;
-        this.y += this.vy;
-
-        // increase velocity so particle
-        // accelerates off screen
-        this.vx *= 0.99;
-        this.vy *= 0.99;
-
-        // adding this negative amount to the
-        // y velocity exerts an upward pull on
-        // the particle, as if drawn to the
-        // surface
-        this.vy -= 0.25;
-
-        // off screen
-        if (this.y < 0) {
-            this.remove = true;
-        }
-
-    };
-
-    this.render = function() {
-        DarkForest.Draw.circle(this.x, this.y, this.r, this.col);
-    };
-
-};
 
 DarkForest.TechnologyExplosion = function(){
     this.time = 0;
@@ -420,7 +349,7 @@ DarkForest.CloseUserFound = function(){
     DarkForest.Draw.text("please choose your next move.",10,DarkForest.height/4+70,14,'white')
     //Create the buttons
     if(this.time<1){
-      var fight = new DarkForest.Fight(self , "Fight" , 10 , DarkForest.height/4+90 ,DarkForest.width/2-20 ,40 , '#D32B2F');
+      var fight = new DarkForest.Fight(self , "Fight" , 10 , DarkForest.height/4+90 ,DarkForest.width/2-20 ,40 , '#FC2251');
       fight.handler = function(){
         socket.emit('fight called' , {id:currentOpponents.id , callId:currentOpponents.myId ,  oppId:currentOpponents.oppId});
         self.remove=true;
@@ -430,7 +359,7 @@ DarkForest.CloseUserFound = function(){
       }
       DarkForest.entities.push(fight);
 
-      var peace = new DarkForest.PeaceButton(self , "Peace" , DarkForest.width/2 + 5 , DarkForest.height/4+90 ,DarkForest.width/2-20 ,40 , '#40E5EC');
+      var peace = new DarkForest.PeaceButton(self , "Peace" , DarkForest.width/2 + 5 , DarkForest.height/4+90 ,DarkForest.width/2-20 ,40 , '#22FCCD');
       peace.handler = function(){
         socket.emit('peace called' , {id:currentOpponents.id , callId:currentOpponents.myId ,  oppId:currentOpponents.oppId});
         self.remove=true;
@@ -996,9 +925,13 @@ DarkForest.Story = function(parent , text,x,y,width,height , col){
 
 DarkForest.menu = function(){
   this.time = 0;
+  
   this.active = false;
   this.remove = false;
   var self = this;
+  
+  
+  
   this.update = function(){
       this.time++;
       if(DarkForest.isFullScreen){
@@ -1008,21 +941,66 @@ DarkForest.menu = function(){
   this.render = function() {
     
     //Create the buttons
+	
     if(this.time<3){
-      var contact = new DarkForest.Contact(self , "Contact" , 0 , DarkForest.height , DarkForest.width , 30 , 'green');
-      contact.handler = function(){
-        alert("contact")
+	
+		
+			
+		var contact = new DarkForest.Contact(self , "Contact" , 0 , DarkForest.height , DarkForest.width , 30 , '#9100EC');
+		contact.handler = function(){
+		
+		if(cntct==2)
+		{
+			cntct=0;
+		}
+		else
+		{
+		stry=0;
+			crdts=0;
+		 cntct++;
+		 }
+		
+		DarkForest.entities.push(new DarkForest.ContactMenu());
+	 
+	  
       }
       DarkForest.entities.push(contact);
-
-      var story = new DarkForest.Story( self , "Story" , 0 , DarkForest.height , DarkForest.width , 30 , 'green');
-      story.hanlder = function(){
-
+	  
+      var story = new DarkForest.Story( self , "Story" , 0 , DarkForest.height , DarkForest.width , 30 , '#9100EC');
+      story.handler = function(){
+	 
+	  if(stry==2)
+		{
+		
+			stry=0;
+		}
+		else
+		{
+		cntct=0;
+			crdts=0;
+		 stry++;
+		 }
+		
+		DarkForest.entities.push(new DarkForest.StoryMenu());
+	  
       }
       DarkForest.entities.push(story);
 
-      var credits = new DarkForest.Credits(self , "Credits" , 0 , DarkForest.height, DarkForest.width , 30 , 'green');
+      var credits = new DarkForest.Credits(self , "Credits" , 0 , DarkForest.height, DarkForest.width , 30 , '#9100EC');
       credits.handler = function(){
+	  if(crdts==2)
+		{
+		
+			crdts=0;
+		}
+		else
+		{
+		stry=0;
+			cntct=0;
+		 crdts++;
+		 }
+		
+		DarkForest.entities.push(new DarkForest.CreditsMenu());
 
       }
       DarkForest.entities.push(credits);
@@ -1033,6 +1011,336 @@ DarkForest.menu = function(){
 
   };
 }
+
+
+///////////////////////////////////////////////////////////////////////////////
+
+DarkForest.ContactMenu = function(){
+
+ this.x =-325;
+  this.y = 0;
+  
+  /*this.handler = function(){
+      //this.timesClicked++;
+      alert("This button has been clicked " + this.timesClicked + " time(s)!");
+  };*/
+  
+  this.update = function(){
+  
+  if(cntct==2)
+  {
+  
+  if(this.x<=0)
+  {
+	this.x+=15;
+	
+	}
+	
+	
+  }
+  else
+  {
+ 
+  if(this.x>=-325)
+	this.x-=15;
+	else
+  cntct=0;
+  }
+  
+	
+  }
+
+
+
+  this.render = function() {
+    
+    //Create the buttons
+	
+	DarkForest.Draw.rect(this.x,37,DarkForest.width-10,DarkForest.height-170,'#312A2A');
+    DarkForest.Draw.text("Contact",this.x+DarkForest.width/2-40,37+20,20,'#9100EC')
+    //Draw the body
+    DarkForest.Draw.rect(this.x,37+30,DarkForest.width-10,DarkForest.height-170,'#5A5959');
+    DarkForest.Draw.text("you can contact us any time at",this.x+10,37+50,14,'white')
+    DarkForest.Draw.text("213123-123123123-123123",this.x+10,37+70,14,'white')
+	
+	}
+
+  };
+///////////////////////////////////////////////////////////////////////////////
+DarkForest.CreditsMenu = function(){
+
+ this.x =-325;
+  this.y = 0;
+  
+  /*this.handler = function(){
+      //this.timesClicked++;
+      alert("This button has been clicked " + this.timesClicked + " time(s)!");
+  };*/
+  
+  this.update = function(){
+  
+  if(crdts==2)
+  {
+  
+  if(this.x<=0)
+  {
+	this.x+=15;
+	
+	}
+	
+	
+  }
+  else
+  {
+  
+  if(this.x>=-325)
+	this.x-=15;
+	else
+  crdts=0;
+  }
+  
+	
+  }
+
+
+
+  this.render = function() {
+    
+    //Create the buttons
+	
+	DarkForest.Draw.rect(this.x,37,DarkForest.width-10,DarkForest.height-170,'#312A2A');
+    DarkForest.Draw.text("Credits",this.x+DarkForest.width/2-40,37+20,20,'#9100EC')
+    //Draw the body
+    DarkForest.Draw.rect(this.x,37+30,DarkForest.width-10,DarkForest.height-170,'#5A5959');
+    DarkForest.Draw.text("you can contact us any time at",this.x+10,37+50,14,'white')
+    DarkForest.Draw.text("213123-123123123-123123",this.x+10,37+70,14,'white')
+	
+	}
+
+  };
+///////////////////////
+DarkForest.StoryMenu = function(){
+
+ this.x =-325;
+  this.y = 0;
+  
+  /*this.handler = function(){
+      //this.timesClicked++;
+      alert("This button has been clicked " + this.timesClicked + " time(s)!");
+  };*/
+  
+  this.update = function(){
+  
+  if(stry==2)
+  {
+  
+  if(this.x<=0)
+  {
+	this.x+=15;
+	
+	}
+	
+	
+  }
+  else
+  {
+  if(this.x>=-325)
+	this.x-=15;
+	else
+  stry=0;
+  }
+  
+	
+  }
+
+
+
+  this.render = function() {
+    
+    //Create the buttons
+	
+	DarkForest.Draw.rect(this.x,37,DarkForest.width-10,DarkForest.height-170,'#312A2A');
+    DarkForest.Draw.text("Story",this.x+DarkForest.width/2-40,37+20,20,'#9100EC')
+    //Draw the body
+    DarkForest.Draw.rect(this.x,37+30,DarkForest.width-10,DarkForest.height-170,'#5A5959');
+    DarkForest.Draw.text("you can contact us any time at",this.x+10,37+50,14,'white')
+    DarkForest.Draw.text("213123-123123123-123123",this.x+10,37+70,14,'white')
+	
+	}
+
+  };
+//////////////////////////particle//////////////////////////
+var checker=true;
+var particles1 = [];
+	var particles2 = [];
+	var particles3 = [];
+DarkForest.Particle = function(){
+
+
+var W=DarkForest.width;
+var H=DarkForest.height;
+
+
+
+ this.x = Math.random()*DarkForest.width;//position
+	this.y = Math.random()*DarkForest.height;
+
+	this.vx = Math.random()*0.5 - 0.5;//velocity
+    this.vy = Math.random()*0.5 - 0.5;
+
+    this.r1 = Math.random()*50;//particle size
+    this.r2 = Math.random()*20;
+    this.r3 = Math.random()*80;
+
+
+
+
+
+
+
+ 
+  this.update = function()
+  {
+  }
+
+
+
+
+
+  this.render = function() {
+  
+    
+	if(checker==true)
+	{
+	for(var i = 0; i <10; i++)
+	{
+		particles1.push(new DarkForest.Particle());
+	}
+	
+	for(var i = 0; i <5; i++)
+	{
+	  particles2.push(new DarkForest.Particle());
+	}
+	
+	for(var i = 0; i <10; i++)
+	{
+	  particles3.push(new DarkForest.Particle());
+	}
+checker=false;
+}
+	var image1 = new Image();
+	var image2 = new Image();
+	var image3 = new Image();
+	image1.src = "star1.png";
+	image2.src = "star2.png";
+	image3.src = "star3.png";
+
+	DarkForest.ctx.fillStyle = "black";
+	DarkForest.ctx.fillRect(0, 40, W, H);
+
+    for(var t =0; t < particles1.length; t++)
+    {
+	     var p = particles1[t];
+       p.x += p.vx;
+       p.y += p.vy;
+		
+       if(p.x+50 < 0) p.x = W;
+       if(p.y+50 < 0) p.y = H;  
+       if(p.x-50 > W ) p.x = 0;
+       if(p.y-50 > H ) p.y = 0;
+	
+       DarkForest.ctx.drawImage(image1,p.x,p.y,p.r1,p.r1); 
+       //ctx.alpha=0.2;
+	  
+    }
+
+   for(var t =0; t < particles2.length; t++)
+    {
+       var p = particles2[t];
+       p.x += p.vx;
+       p.y += p.vy;
+
+       if(p.x+50 < 0) p.x = W;
+       if(p.y+50 < 0) p.y = H;  
+       if(p.x-50 > W ) p.x = 0;
+       if(p.y-50 > H ) p.y = 0;
+       DarkForest.ctx.drawImage(image2,p.x,p.y,p.r2,p.r2); 
+	  
+    }
+
+     for(var t =0; t < particles3.length; t++)
+    {
+       var p = particles3[t];
+       p.x += p.vx;
+       p.y += p.vy;
+
+       if(p.x+50 < 0) p.x = W;
+       if(p.y+50 < 0) p.y = H;  
+       if(p.x-50 > W ) p.x = 0;
+       if(p.y-50 > H ) p.y = 0;
+
+       DarkForest.ctx.drawImage(image3,p.x,p.y,p.r3,p.r3); 
+	   
+    }
+
+
+
+    }
+	
+	
+	
+  };
+/////////////////////////////radar/////////////////////////////
+DarkForest.Radar = function(){
+	var W=DarkForest.width;
+	var H=DarkForest.height;
+
+
+
+ 
+  this.update = function()
+  {
+  
+  }
+
+
+
+
+
+  this.render = function() {
+   var image1 = new Image();
+    var image = new Image();
+	var image3 = new Image();
+	
+    image.src = "radar.png";
+	image1.src = "User.png";
+	image3.src = "enermy.png";
+	
+	DarkForest.ctx.drawImage(image,(W-120)/2,(H-10)/2,120,120); 
+	DarkForest.ctx.drawImage(image1,(W-60)/2,(H+60)/2,60,45); 
+	if(enemy==true)
+	DarkForest.ctx.drawImage(image3,(W)/3,(H)/3,60,45); 
+	
+    }
+	
+	
+	
+  };
+
+////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 //this goes at the start of the program
 // to track players's progress
@@ -1079,6 +1387,7 @@ window.onload = function(){
     });
 
     socket.on('close user found', function(data){
+		enemy=true;
         var ids = {id:data.id , myId:User.id , oppId:data.oppId}
         console.log(ids);
         currentOpponents = ids;
@@ -1086,10 +1395,12 @@ window.onload = function(){
     })
 
     socket.on('loss' , function(data){
+	enemy=false;
         DarkForest.Loss.active = true;
     })
 
     socket.on('win',function(data){
+	enemy=false;
         User.newKill(data.score);
         DarkForest.score.score+=data.score;
         DarkForest.score.killed++;
@@ -1097,6 +1408,7 @@ window.onload = function(){
     });
 
     socket.on('peace' , function(data){
+	enemy=false;
         DarkForest.Peace.active = true;
         console.log('peace made');
     })
