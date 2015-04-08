@@ -85,9 +85,9 @@ var DarkForest = {
         if(DarkForest.ExitFullScreen.active){
           var d = new DarkForest.ExitFullScreen('MENU',220 , 15 , 100 , 20 , '#9100EC');
           d.handler = function(){
-    		  crdts=0;
-    		  stry=0;
-    		  cntct=0;
+		  crdts=0;
+		  stry=0;
+		  cntct=0;
             DarkForest.isFullScreen = !DarkForest.isFullScreen;
             DarkForest.menu.active = true;
             console.log(DarkForest.isFullScreen);
@@ -121,6 +121,14 @@ var DarkForest = {
           DarkForest.currentActive = techExplosion;
            DarkForest.entities.push(loss);
            DarkForest.Loss.active = false;
+        }
+        if(DarkForest.Wait.active && !(DarkForest.currentActive instanceof DarkForest.CloseUserFound)){
+          if(DarkForest.currentActive!=null)
+            DarkForest.currentActive.remove = true;
+           var wait = new DarkForest.Wait();
+           DarkForest.currentActive = wait;
+           DarkForest.entities.push(wait);
+           DarkForest.Wait.active = false;
         }
         if(DarkForest.Win.active){
           if(DarkForest.currentActive!=null )
@@ -211,7 +219,7 @@ var DarkForest = {
             DarkForest.canvas.style.width = DarkForest.currentWidth + 'px';
             DarkForest.canvas.style.height = DarkForest.currentHeight + 'px';
 
-                        
+                       
             // we use a timeout here because some mobile
             // browsers don't fire if there is not
             // a short delay
@@ -345,25 +353,27 @@ DarkForest.CloseUserFound = function(){
     DarkForest.Draw.text("War Alert",DarkForest.width/2-40,DarkForest.height/4+20,20,'red')
     //Draw the body
     DarkForest.Draw.rect(5,DarkForest.height/4+30,DarkForest.width-10,115,'#5A5959');
-    DarkForest.Draw.text("You are in a war with civilization #002",10,DarkForest.height/4+50,14,'white')
+    DarkForest.Draw.text("You are in a war with civilization #"+currentOpponents.number,10,DarkForest.height/4+50,14,'white')
     DarkForest.Draw.text("please choose your next move.",10,DarkForest.height/4+70,14,'white')
     //Create the buttons
     if(this.time<1){
-      var fight = new DarkForest.Fight(self , "Fight" , 10 , DarkForest.height/4+90 ,DarkForest.width/2-20 ,40 , '#FC2251');
+      var fight = new DarkForest.Fight(self , "Fight" , 10 , DarkForest.height/4+90 ,DarkForest.width/2-20 ,40 , '#D32B2F');
       fight.handler = function(){
         socket.emit('fight called' , {id:currentOpponents.id , callId:currentOpponents.myId ,  oppId:currentOpponents.oppId});
         self.remove=true;
         fight.remove=true;
         peace.remove = true;
+        DarkForest.Wait.active = true;
         DarkForest.currentActive = null;
       }
       DarkForest.entities.push(fight);
 
-      var peace = new DarkForest.PeaceButton(self , "Peace" , DarkForest.width/2 + 5 , DarkForest.height/4+90 ,DarkForest.width/2-20 ,40 , '#22FCCD');
+      var peace = new DarkForest.PeaceButton(self , "Peace" , DarkForest.width/2 + 5 , DarkForest.height/4+90 ,DarkForest.width/2-20 ,40 , '#40E5EC');
       peace.handler = function(){
         socket.emit('peace called' , {id:currentOpponents.id , callId:currentOpponents.myId ,  oppId:currentOpponents.oppId});
         self.remove=true;
         console.log(currentOpponents);
+        DarkForest.Wait.active = true;
         fight.remove=true;
         peace.remove = true;
         DarkForest.currentActive = null;
@@ -399,6 +409,25 @@ DarkForest.PermissionError = function(){
   };
 }
 
+DarkForest.Wait = function(){
+  this.time = 0;
+  this.active = false;
+  this.remove = false;
+  this.update = function(){
+      
+  }
+  this.render = function() {
+    //Draw the header
+    DarkForest.Draw.rect(5,DarkForest.height/4,DarkForest.width-10,30,'#312A2A');
+    DarkForest.Draw.text("Wait",DarkForest.width/2-20,DarkForest.height/4+15,16,'red')
+    //Draw the body
+    DarkForest.Draw.rect(5,DarkForest.height/4+30,DarkForest.width-10,85,'#5A5959');
+    DarkForest.Draw.text("Waiting for opponent to respond",10,DarkForest.height/4+50,14,'white')
+    //paint_centered_wrap(DarkForest.canvas, 20, DarkForest.height/4, DarkForest.width-40, DarkForest.height/4, "Congrats! You win the war. You enemy was a less developed civilization. You have adopted your enemy's score!", 12, 2);
+
+  };
+}
+
 DarkForest.Win = function(){
   this.time = 0;
   this.active = false;
@@ -425,24 +454,33 @@ DarkForest.Win = function(){
 
 DarkForest.Loss = function(){
   this.time = 0;
+  var self=this;
   this.active = false;
   this.remove = false;
   this.update = function(){
       this.time++;
-      if(this.time>100){
-        this.remove=true;
-      }
+     
   }
   this.render = function() {
     //Draw the header
     DarkForest.Draw.rect(5,DarkForest.height/4,DarkForest.width-10,30,'#312A2A');
     DarkForest.Draw.text("Loss",DarkForest.width/2-20,DarkForest.height/4+15,16,'red')
-    //Draw the body
-    DarkForest.Draw.rect(5,DarkForest.height/4+30,DarkForest.width-10,85,'#5A5959');
+    //Draw the body DarkForest.score.score
+    DarkForest.Draw.rect(5,DarkForest.height/4+30,DarkForest.width-10,145,'#5A5959');
     DarkForest.Draw.text("Your civilization has been ",10,DarkForest.height/4+50,14,'white')
     DarkForest.Draw.text("destroyed. We are looking forward ",10,DarkForest.height/4+70,14,'white')
-    DarkForest.Draw.text("to see you again.",10,DarkForest.height/4+90,14,'white')
-    //paint_centered_wrap(DarkForest.canvas, 20, DarkForest.height/4, DarkForest.width-40, DarkForest.height/4, "Your civilization #001 has been destroyed. We are looking forward to see you again.", 12, 2);
+    DarkForest.Draw.text("to see you again ",10,DarkForest.height/4+90,14,'white')
+	DarkForest.Draw.text("Your Score Is "+DarkForest.score.score,10,DarkForest.height/4+110,14,'white')
+	DarkForest.Draw.text("Killed number Is "+DarkForest.score.killed,10,DarkForest.height/4+130,14,'white')
+    
+	var StartOver = new DarkForest.StartOver(self , "start Over" , 8 , DarkForest.height/4+120 ,DarkForest.width-16 ,40 , '#D32B2F');
+      StartOver.handler = function(){
+	 
+        location.reload();
+      }
+      DarkForest.entities.push(StartOver);
+	
+	//paint_centered_wrap(DarkForest.canvas, 20, DarkForest.height/4, DarkForest.width-40, DarkForest.height/4, "Your civilization #001 has been destroyed. We are looking forward to see you again.", 12, 2);
 
   };
 }
@@ -525,6 +563,7 @@ DarkForest.Fight = function(parent , text,x,y,width,height , col){
     if (this.clicked && wasNotClicked) {
       console.log("click")
         this.handler()
+		DarkForest.mouse.down=false;
     }
   }
   this.render = function(){
@@ -1327,14 +1366,94 @@ DarkForest.Radar = function(){
 	
   };
 
+  
+  
 ////////////////////////////////////////////////////////////
 
+DarkForest.StartOver = function(parent , text,x,y,width,height , col){
+  this.x = x;
+  this.y = y;
+  this.width = width;
+  this.height = height;
+  this.clicked = false;
+  this.hovered = false;
+  this.text = text;
+
+  this.time = 0;
+  this.active = false;
+  this.remove = false;
+  
+  /*this.handler = function(){
+      //this.timesClicked++;
+      alert("This button has been clicked " + this.timesClicked + " time(s)!");
+  };*/
+  this.intersects = function(obj, mouse) {
+        var t = 5; //tolerance
+        if(mouse==null)
+          return;
+        //console.log(mouse);
+        //console.log(obj)
+        var xIntersect = (mouse.x + t) > obj.x && (mouse.x - t) <  obj.x + obj.width;
+        var yIntersect = (mouse.y + t) > obj.y && (mouse.y - t) <  obj.y + obj.height;
+        //DarkForest.mouse = null;
+        return  xIntersect && yIntersect;
+    }
+
+  this.updateStats = function(canvas){
+        if (this.intersects(this, DarkForest.mouse)) {
+            this.hovered = true;
+            if (DarkForest.mouse.clicked) {
+                this.clicked = true;
+            }
+        } else {
+            this.hovered = false;
+        }
+
+        if (!DarkForest.mouse.down) {
+            this.clicked = false;
+        }               
+    }
+
+  this.update = function(){
+    this.time++;
+    if(parent.remove){
+      this.remove=true;
+    }
+    var wasNotClicked = !this.clicked;
+    this.updateStats(DarkForest.ctx);
+
+    if (this.clicked && wasNotClicked) {
+	if(parent.time>0)
+        this.handler()
+    }
+  }
+  this.render = function(){
+    
+    
+    //draw button
+    DarkForest.ctx.fillStyle = col;
+    DarkForest.ctx.fillRect(this.x, this.y, this.width, this.height);
+
+    //text options
+    var fontSize = 20;
+    //DarkForest.ctx.setFillColor(1, 1, 1, 1.0);
+    DarkForest.ctx.font = fontSize + "px sans-serif";
+
+    //text position
+    var textSize = DarkForest.ctx.measureText(this.text);
+    var textX = this.x + (this.width/2) - (textSize.width / 2);
+    var textY = this.y + (this.height/2) + fontSize/3;
+
+    //draw the text
+    DarkForest.ctx.fillStyle = 'white';
+    DarkForest.ctx.fillText(this.text, textX, textY);
+  }
+}
 
 
 
 
-
-
+/////////////////////////////////////////////////////////////
 
 
 
@@ -1388,7 +1507,7 @@ window.onload = function(){
 
     socket.on('close user found', function(data){
 		enemy=true;
-        var ids = {id:data.id , myId:User.id , oppId:data.oppId}
+        var ids = {id:data.id , myId:User.id , oppId:data.oppId , number:data.number}
         console.log(ids);
         currentOpponents = ids;
         DarkForest.CloseUserFound.active=true;

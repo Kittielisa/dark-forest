@@ -17,7 +17,7 @@ app.get('/*.*' , function(req , res , next){
 
 
 
-var playerCount = 0;
+var playerCount = 1;
 var users = [];	//keep track of all the online users
 var sockets = [];
 var deciding_pairs = [];
@@ -49,7 +49,7 @@ io.on('connection' , function(socket){
 	            //alert(unique_url);
 	        });
 
-	users.push({id:uniqueId , lat:0 , lon:0 , score:0});
+	users.push({id:uniqueId , lat:0 , lon:0 , score:0 , number:playerCount++});
 	sockets.push({id:uniqueId , con:socket , status:'open'});
 	io.emit('new user' , {online : users.length-1});
 	socket.emit('welcome' , {id:uniqueId});
@@ -91,11 +91,19 @@ io.on('connection' , function(socket){
 		}
 		else if(closeUser.id!=data.id && !idleUser(closeUser , users[index]) ){
 			var exist = false;
+			console.log(deciding_pairs.length)
 			for (var i = deciding_pairs.length - 1; i >= 0; i--) {
-				if(deciding_pairs[i].user1==closeUser && deciding_pairs[i].user2==users[index] || deciding_pairs[i].user2==closeUser && deciding_pairs[i].user1==users[index])
+				if(deciding_pairs[i].user1==closeUser || deciding_pairs[i].user2==users[index] || deciding_pairs[i].user2==closeUser || deciding_pairs[i].user1==users[index]){
 					exist = true;
+					console.log("start");
+					console.log(deciding_pairs);
+					console.log(closeUser);
+					console.log(users[index]);
+					console.log("end");
+				}
 			};
 			if(!exist){
+				console.log(exist);
 				var uniqueId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 				        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
 				        return v.toString(16);
@@ -103,8 +111,8 @@ io.on('connection' , function(socket){
 
 				deciding_pairs.push({id:uniqueId , user1:users[index] , user1_status:"open" , user2:closeUser , user2_status:"open"});
 				var closeUserSocket = getSocketById(closeUser.id);
-				socket.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:closeUser.lat , lon:closeUser.lon , score:closeUser.score});
-				closeUserSocket.con.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:users[index].lat , lon:users[index].lon , score:users[index].score});
+				socket.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:closeUser.lat , lon:closeUser.lon , score:closeUser.score , number:closeUser.number});
+				closeUserSocket.con.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:users[index].lat , lon:users[index].lon , score:users[index].score , number:users[index].number});
 			}
 			
 		}
@@ -122,10 +130,49 @@ io.on('connection' , function(socket){
 		var pair = getDecidingPairById(data.id);
 		//console.log(pair);
 		if(pair!=null){
-			decideWinner(pair);
-			//remove the pair from deciding pairs
-			var index = deciding_pairs.indexOf(pair);
-			deciding_pairs.splice(index , 1);
+	//the caller is stored as user1 in the pair
+			if(pair.user1.id==caller_id){
+				//if the other user chose to fight
+				if(pair.user2_status!="open"){
+					decideWinner(pair);
+					//remove the pair from deciding pairs
+					var index = deciding_pairs.indexOf(pair);
+					deciding_pairs.splice(index , 1);
+					//idle_pairs.push(pair);
+
+				}
+				//else update the status of the caller in deciding_pairs
+				else{
+					var index = deciding_pairs.indexOf(pair);
+					//console.log(deciding_pairs);
+					deciding_pairs.splice(index , 1);
+					deciding_pairs.push({id:pair.id , user1:pair.user1 , user1_status:"fight" , user2:pair.user2 , user2_status:pair.user2_status});
+					console.log(deciding_pairs);
+				}
+
+			}
+			//the caller is stored as user2
+			else if(pair.user2.id==caller_id){
+				//if the other user chose to fight
+				if(pair.user1_status!="open"){
+					decideWinner(pair);
+					//remove the pair from deciding pairs
+					var index = deciding_pairs.indexOf(pair);
+					deciding_pairs.splice(index , 1);
+
+					//idle_pairs.push(pair);
+				}
+				//else update the status of the caller in deciding_pairs
+				else{
+					//console.log(deciding_pairs);
+					var index = deciding_pairs.indexOf(pair);
+					deciding_pairs.splice(index , 1);
+					deciding_pairs.push({id:pair.id , user1:pair.user1 , user1_status:pair.user1_status , user2:pair.user2 , user2_status:"fight"});
+					console.log(deciding_pairs);
+					//console.log(deciding_pairs);
+				}
+			}
+		
 		}
 			
 	})
@@ -154,6 +201,14 @@ io.on('connection' , function(socket){
 				idle_pairs.push(pair);
 
 			}
+			else if(pair.user2_status=="fight"){
+				decideWinner(pair);
+				//remove the pair from deciding pairs
+				var index = deciding_pairs.indexOf(pair);
+				deciding_pairs.splice(index , 1);
+				//idle_pairs.push(pair);
+
+			}
 			//else update the status of the caller in deciding_pairs
 			else{
 				var index = deciding_pairs.indexOf(pair);
@@ -172,6 +227,14 @@ io.on('connection' , function(socket){
 				deciding_pairs.splice(index , 1);
 
 				idle_pairs.push(pair);
+			}
+			else if(pair.user1_status=="fight"){
+				decideWinner(pair);
+				//remove the pair from deciding pairs
+				var index = deciding_pairs.indexOf(pair);
+				deciding_pairs.splice(index , 1);
+				//idle_pairs.push(pair);
+
 			}
 			//else update the status of the caller in deciding_pairs
 			else{
@@ -257,9 +320,11 @@ function makePeace(pair){
 function idleUser(user1 , user2){
 	for(var i=0;i<idle_pairs.length;i++){
 		if(idle_pairs[i].user1==user1 && idle_pairs[i].user2==user2){
+			console.log("return true")
 			return true;
 		}
 		else if(idle_pairs[i].user1==user2 && idle_pairs[i].user2==user1){
+			console.log("return true")
 			return true;
 		}
 	}
