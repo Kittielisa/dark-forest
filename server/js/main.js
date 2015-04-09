@@ -5,7 +5,10 @@ var crdts=0;
 var firstTime = true;
 var enemy=false;
 
-
+/*
+  The main class is DarkForest. It contains all the visual elements and game logic
+  For reference : http://www.smashingmagazine.com/2012/10/19/design-your-own-mobile-game/
+*/
 var DarkForest = {
 	
   width : 320 ,
@@ -60,21 +63,27 @@ var DarkForest = {
     // and checked for collisions, etc.
     update: function() {
         var i;
-        // spawn a new instance of Touch
-        // if the user has tapped the screen
-		
+    //if the game just started, add the particles and radar in the enitities
 		if(firstTime){
 			DarkForest.entities.push(new DarkForest.Particle());
 			DarkForest.entities.push(new DarkForest.Radar());
 			firstTime = false;
 		}
 		
-		
+		    //if menu is clicked, push a new instance of menu in the entities
         if(DarkForest.menu.active){
-          console.log("full screen exited")
           DarkForest.entities.push(new DarkForest.menu());
           DarkForest.menu.active = false;
         }
+
+        //if menu is clicked, push a new instance of menu in the entities
+        if(DarkForest.locationError.active){
+          DarkForest.entities.push(new DarkForest.locationError());
+          DarkForest.locationError.active = false;
+        }
+        // spawn a new instance of Touch
+        // if the user has tapped the screen
+        
         if (DarkForest.Input.tapped) {
             DarkForest.entities.push(new DarkForest.Touch(DarkForest.Input.x, DarkForest.Input.y));
             // set tapped back to false
@@ -82,15 +91,15 @@ var DarkForest = {
             // in the next cycle
             DarkForest.Input.tapped = false;
         }
+        //create the menu button when the game launches for the first time
         if(DarkForest.ExitFullScreen.active){
           var d = new DarkForest.ExitFullScreen('MENU',220 , 15 , 100 , 20 , '#9100EC');
           d.handler = function(){
-		  crdts=0;
-		  stry=0;
-		  cntct=0;
+    		  crdts=0;
+    		  stry=0;
+    		  cntct=0;
             DarkForest.isFullScreen = !DarkForest.isFullScreen;
             DarkForest.menu.active = true;
-            console.log(DarkForest.isFullScreen);
           }
           DarkForest.entities.push(d)
  
@@ -106,6 +115,8 @@ var DarkForest = {
                 DarkForest.entities.splice(i, 1);
             }
         }
+
+        //create a new instance of technology explosion popup and add it to the entities
         if(DarkForest.TechnologyExplosion.active && !(DarkForest.currentActive instanceof DarkForest.CloseUserFound)){
           if(DarkForest.currentActive!=null)
             DarkForest.currentActive.remove = true;
@@ -114,6 +125,8 @@ var DarkForest = {
            DarkForest.entities.push(techExplosion);
            DarkForest.TechnologyExplosion.active = false;
         }
+        //create a new instance of loss popup and add it to the entities
+
         if(DarkForest.Loss.active){
           if(DarkForest.currentActive!=null )
             DarkForest.currentActive.remove = true;
@@ -122,6 +135,8 @@ var DarkForest = {
            DarkForest.entities.push(loss);
            DarkForest.Loss.active = false;
         }
+        //create a new instance of wait popup and add it to the entities
+
         if(DarkForest.Wait.active && !(DarkForest.currentActive instanceof DarkForest.CloseUserFound)){
           if(DarkForest.currentActive!=null)
             DarkForest.currentActive.remove = true;
@@ -130,6 +145,9 @@ var DarkForest = {
            DarkForest.entities.push(wait);
            DarkForest.Wait.active = false;
         }
+
+       //create a new instance of win popup and add it to the entities
+
         if(DarkForest.Win.active){
           if(DarkForest.currentActive!=null )
             DarkForest.currentActive.remove = true;
@@ -138,6 +156,9 @@ var DarkForest = {
            DarkForest.entities.push(win);
            DarkForest.Win.active = false;
         }
+
+        //create a new instance of peace popup and add it to the entities
+
         if(DarkForest.Peace.active && !(DarkForest.currentActive instanceof DarkForest.CloseUserFound)){
 
           if(DarkForest.currentActive!=null)
@@ -147,6 +168,9 @@ var DarkForest = {
            DarkForest.entities.push(peace);
            DarkForest.Peace.active = false;
         }
+
+         //create a new instance of 'war alert' popup and add it to the entities
+
         if(DarkForest.CloseUserFound.active){
           if(DarkForest.currentActive!=null)
             DarkForest.currentActive.remove = true;
@@ -233,16 +257,16 @@ var DarkForest = {
 // abstracts various canvas operations into
 // standalone functions
 DarkForest.Draw = {
-
+    //clear the screen
     clear: function() {
         DarkForest.ctx.clearRect(0, 0, DarkForest.width, DarkForest.height);
     },
-
+    //draw a rectangle at (x,y) with width w, height h and color col
     rect: function(x, y, w, h, col) {
         DarkForest.ctx.fillStyle = col;
         DarkForest.ctx.fillRect(x, y, w, h);
     },
-
+    //draw a circle ar (x,y) with radius r and color col
     circle: function(x, y, r, col) {
         DarkForest.ctx.fillStyle = col;
         DarkForest.ctx.beginPath();
@@ -250,7 +274,7 @@ DarkForest.Draw = {
         DarkForest.ctx.closePath();
         DarkForest.ctx.fill();
     },
-
+    //write 'string' at x,y with size 'size' and color col
     text: function(string, x, y, size, col) {
         DarkForest.ctx.font = 'bold '+size+'px Monospace';
         DarkForest.ctx.fillStyle = col;
@@ -278,10 +302,7 @@ DarkForest.Input = {
         this.tapped = true; 
         DarkForest.mouse.x = this.x;
         DarkForest.mouse.y = this.y;
-        console.log(DarkForest.mouse)
-       // DarkForest.mouse.down = (data.which == 1);
-       // DarkForest.mouse.clicked = (data.which == 1 && !DarkForest.mouse.down);
-        //DarkForest.Draw.circle(this.x, this.y, 10, 'red');
+        
     }
 
 };
@@ -310,13 +331,18 @@ DarkForest.Touch = function(x, y) {
 
 };
 
+/*
+  Handles the technology explosion popup
+*/
 
 DarkForest.TechnologyExplosion = function(){
     this.time = 0;
-    this.active = false;
-    this.remove = false;
+    this.active = false; //set active property to true to display popup
+    this.remove = false;  //set remove property to true to remove popup
+
     this.update = function(){
         this.time++;
+        //when the timer reaches 100, remove the popup
         if(this.time>100){
           this.remove=true;
         }
@@ -332,7 +358,6 @@ DarkForest.TechnologyExplosion = function(){
       DarkForest.Draw.text("You just experienced a technology",10,DarkForest.height/4+50,14,'white')
       DarkForest.Draw.text("explosion, which gives you 5",10,DarkForest.height/4+70,14,'white')
       DarkForest.Draw.text("bonus score.",10,DarkForest.height/4+90,14,'white')
-      //paint_centered_wrap(DarkForest.canvas, 20, DarkForest.height/4, DarkForest.width-40, DarkForest.height/4, "You just experienced a technology explosion, which gives you 5 bonus score.", 12, 2);
     };
 }
 
@@ -1450,7 +1475,27 @@ DarkForest.StartOver = function(parent , text,x,y,width,height , col){
   }
 }
 
+DarkForest.locationError = function(){
+  this.time = 0;
+  this.active = false;
+  this.remove = false;
+  this.update = function(){
+      this.time++;
+      
+  }
+  this.render = function() {
+    //Draw the header
+    DarkForest.Draw.rect(5,DarkForest.height/4,DarkForest.width-10,30,'#312A2A');
+    DarkForest.Draw.text("Location Error",DarkForest.width/2-90,DarkForest.height/4+15,16,'red')
+    //Draw the body
+    DarkForest.Draw.rect(5,DarkForest.height/4+30,DarkForest.width-10,85,'#5A5959');
+    DarkForest.Draw.text("Please go to the right location to ",10,DarkForest.height/4+50,14,'white')
+    DarkForest.Draw.text("participate in the game",10,DarkForest.height/4+70,14,'white')
+   // DarkForest.Draw.text("bonus score.",10,DarkForest.height/4+90,14,'black')
+    //paint_centered_wrap(DarkForest.canvas, 20, DarkForest.height/4, DarkForest.width-40, DarkForest.height/4, "You and the other civilization are both peaceful. You are free to leave.", 12, 2);
 
+  };
+}
 
 
 /////////////////////////////////////////////////////////////
@@ -1473,73 +1518,7 @@ DarkForest.score = {
 var socket ;
 window.onload = function(){
   //connect to the server
-    socket = io.connect('/');
-
-  //receive your random id from server
-    socket.on('welcome',function(data){
-        User.id = data.id;
-        console.log(User.id);
-    })
-    //if a new user arrives
-  socket.on('new user',function(data){
-    console.log("new user connected");
-    User.newUser(data.online);
-    DarkForest.score.totalOnline=++data.online;
-    getLocationUpdate();
-
-  });
-
-  //if a user leavers
-  socket.on('user disconnected', function(data){
-    console.log("user disconnected");
-    User.userLeft();
-    DarkForest.score.totalOnline--;
-  });
-
-    //periodically receive score updates
-    socket.on('score update', function(data){
-        if(data.id==User.id)
-        {
-            User.increaseScore(data.score);
-            DarkForest.score.score=data.score;
-        }
-    });
-
-    socket.on('close user found', function(data){
-		enemy=true;
-        var ids = {id:data.id , myId:User.id , oppId:data.oppId , number:data.number}
-        console.log(ids);
-        currentOpponents = ids;
-        DarkForest.CloseUserFound.active=true;
-    })
-
-    socket.on('loss' , function(data){
-	enemy=false;
-        DarkForest.Loss.active = true;
-    })
-
-    socket.on('win',function(data){
-	enemy=false;
-        User.newKill(data.score);
-        DarkForest.score.score+=data.score;
-        DarkForest.score.killed++;
-        DarkForest.Win.active = true;
-    });
-
-    socket.on('peace' , function(data){
-	enemy=false;
-        DarkForest.Peace.active = true;
-        console.log('peace made');
-    })
-
-    socket.on('tech explosion' , function(data){
-        User.increaseScore(5);
-        DarkForest.score.score+=5;
-        DarkForest.TechnologyExplosion.active = true;
-    })
-    
-
-
+    getLocation();
 
 }
 
@@ -1553,6 +1532,25 @@ function showLocation(position) {
 //if an error occurs while accessing location
 function errorHandler(err) {
    DarkForest.PermissionError.active = true;
+}
+
+//calculates the distance between two {latitude , longitude} pairs
+function distance(lat1,lon1,lat2,lon2) {
+  var R = 6371; // Radius of the earth in km
+  var dLat = deg2rad(lat2-lat1);  // deg2rad below
+  var dLon = deg2rad(lon2-lon1); 
+  var a = 
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
+    Math.sin(dLon/2) * Math.sin(dLon/2)
+    ; 
+  var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
+  var d = R * c; // Distance in km
+  return d; //distance in m
+}
+
+function deg2rad(deg) {
+  return deg * (Math.PI/180)
 }
 
 //updates each time the location of user changes
@@ -1570,6 +1568,95 @@ function getLocationUpdate(){
    }
 }
 
+getLocation = function(){
+      if (navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(savePosition , handleError);
+      } else { 
+         locationAccess.bool = false;
+      }
+    
+    }
+  savePosition = function(position){
+    var lat =  position.coords.latitude;
+    var lon =  position.coords.longitude;
+
+    if(distance(lat , lon , 40.692206, -73.963042)<160){
+          socket = io.connect('/');
+
+        //receive your random id from server
+          socket.on('welcome',function(data){
+              User.id = data.id;
+              console.log(User.id);
+          })
+          //if a new user arrives
+          socket.on('new user',function(data){
+          User.newUser(data.online);
+          DarkForest.score.totalOnline=++data.online;
+          getLocationUpdate();
+
+        });
+
+        //if a user leavers
+        socket.on('user disconnected', function(data){
+          console.log("user disconnected");
+          User.userLeft();
+          DarkForest.score.totalOnline--;
+        });
+
+          //periodically receive score updates
+          socket.on('score update', function(data){
+              if(data.id==User.id)
+              {
+                  User.increaseScore(data.score);
+                  DarkForest.score.score=data.score;
+              }
+          });
+          //if a close user found, show popup for teh user to decide between fight and peace
+          socket.on('close user found', function(data){
+              enemy=true;
+              var ids = {id:data.id , myId:User.id , oppId:data.oppId , number:data.number}
+              console.log(ids);
+              currentOpponents = ids;
+              DarkForest.CloseUserFound.active=true;
+          })
+          //if the user loses a fight, display loss popup
+          socket.on('loss' , function(data){
+             enemy=false;
+              DarkForest.Loss.active = true;
+          })
+          //if the user wins a fight, display win popup
+
+          socket.on('win',function(data){
+               enemy=false;
+              User.newKill(data.score);
+              DarkForest.score.score+=data.score;
+              DarkForest.score.killed++;
+              DarkForest.Win.active = true;
+          });
+          //if both user choose peace, show peace popup
+          socket.on('peace' , function(data){
+             enemy=false;
+              DarkForest.Peace.active = true;
+          })
+          //if the user receives a technology explosion bonus, show the popu notifying him about the bonus
+          socket.on('tech explosion' , function(data){
+              User.increaseScore(5);
+              DarkForest.score.score+=5;
+              DarkForest.TechnologyExplosion.active = true;
+          })
+          
+        }else{
+          DarkForest.locationError.active = true;
+        }
+
+}
+
+handleError = function(error){
+
+}
+
+
+
 window.addEventListener('load', DarkForest.init, false);
 window.addEventListener('resize', DarkForest.resize, false);
 // listen for clicks
@@ -1577,21 +1664,22 @@ window.addEventListener('click', function(e) {
     e.preventDefault();
     DarkForest.Input.set(e);
 }, false);
-
+//listen for mouse down events
 window.addEventListener("mousedown", function(e) {
     console.log("mousedown")
     DarkForest.mouse.clicked = !DarkForest.mouse.down;
     DarkForest.mouse.down = true;
 });
+//listen for mousemove events
 
 window.addEventListener("mousemove", function(e) {
-    //DarkForest.mouse.x = e.offsetX;
-    //DarkForest.mouse.y = e.offsetY;
+    
     e.preventDefault();
     DarkForest.Input.set(e);
     DarkForest.mouse.clicked = (e.which == 1 && !DarkForest.mouse.down);
     DarkForest.mouse.down = (e.which == 1);
 });
+//listen for mouseup events
 
 window.addEventListener("mouseup", function(e) {
     DarkForest.mouse.down = false;

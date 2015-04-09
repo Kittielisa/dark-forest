@@ -3,12 +3,13 @@ var server = require('http').Server(app);
 var io = require('socket.io')(server);
 var cookieParser = require('cookie-parser')
 
+//the server port and IP are configured
 var server_port = process.env.PORT || 3000
 var server_ip_address = process.env.IP || '127.0.0.1'
 
 app.use(cookieParser())
 
-
+//if a request comes, get teh required file from the path and return as response
 app.get('/*.*' , function(req , res , next){
     var fileName = req.path;
     res.cookie('user' , 'true' , {httpOnly: false });
@@ -23,37 +24,31 @@ var sockets = [];
 var deciding_pairs = [];
 var idle_pairs = [];
 
+//start the server on the port specified
 server.listen(server_port, function () {
   console.log( "Listening on " + server_ip_address + ", server_port " + server_port )
 });
 
-//console.log(distance(34,78,34.0001,78));
+
 //socket.io code to handle multiple users
 io.on('connection' , function(socket){
 	console.log("new user connected");
-	/*var user_cookie = socket.handshake.headers.cookie.split(';');
-	for (var i = user_cookie.length - 1; i >= 0; i--) {
-    	var name = user_cookie[i].split('=')[0];
-    	var value = user_cookie[i].split('=')[1];
-    	console.log(name);
-    	console.log(value)
-    	if(name==' user' && value=='true')
-    		valid = true;
-    };
-    if(!valid){
-    	
-    }*/
+	//a unique id to be assigned to each user
 	var uniqueId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 	            var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
 	            return v.toString(16);
 	            //alert(unique_url);
 	        });
-
+	//push the new user to users array
 	users.push({id:uniqueId , lat:0 , lon:0 , score:0 , number:playerCount++});
+	//push the newly created socket to sockets array
 	sockets.push({id:uniqueId , con:socket , status:'open'});
+	//allow all online users to know that a new user has joined
 	io.emit('new user' , {online : users.length-1});
+	//send the unique id to the newly joining user
 	socket.emit('welcome' , {id:uniqueId});
 
+	//if a player leaves, remove it from the users array, remove its socket from sockets array and close the socket
 	socket.on('disconnect',function(data){
 		var disconnect_user = getUserById(uniqueId);
 		var disconnect_socket = getSocketById(uniqueId);
@@ -76,41 +71,40 @@ io.on('connection' , function(socket){
 		var s = sockets.indexOf(socket);
 		sockets[s].status = 'open';
 	})
-
+	//fires when a user location change event is detected
 	socket.on('location change' , function(data){
 		console.log("location change received")
+		//get the data of the user
 		var user = getUserById(data.id);
 		var index = users.indexOf(user);
 		users[index].lat = data.lat;
 		users[index].lon = data.lon;
-		//console.log(users[i]);
+		//check if any user is within the war zone
 		var closeUser = isClose(users[index]);
-
+		//if there is no user in the war zone, do nothing
 		if(closeUser==null){
 			return;
 		}
+		//else if a user is found close enough and the pair is not in idleUsers
 		else if(closeUser.id!=data.id && !idleUser(closeUser , users[index]) ){
 			var exist = false;
-			console.log(deciding_pairs.length)
+			//check if one of them is already not in the deciding pairs
 			for (var i = deciding_pairs.length - 1; i >= 0; i--) {
 				if(deciding_pairs[i].user1==closeUser || deciding_pairs[i].user2==users[index] || deciding_pairs[i].user2==closeUser || deciding_pairs[i].user1==users[index]){
 					exist = true;
-					console.log("start");
-					console.log(deciding_pairs);
-					console.log(closeUser);
-					console.log(users[index]);
-					console.log("end");
+				
 				}
 			};
 			if(!exist){
-				console.log(exist);
+				//generate a unique id for the pair
 				var uniqueId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
 				        var r = Math.random()*16|0, v = c == 'x' ? r : (r&0x3|0x8);
 				        return v.toString(16);
 				    });
-
+				//add both the users in the deciding pairs array
 				deciding_pairs.push({id:uniqueId , user1:users[index] , user1_status:"open" , user2:closeUser , user2_status:"open"});
 				var closeUserSocket = getSocketById(closeUser.id);
+				//send a event notifying both of them about the opponent
 				socket.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:closeUser.lat , lon:closeUser.lon , score:closeUser.score , number:closeUser.number});
 				closeUserSocket.con.emit('close user found' , {id:uniqueId , oppId:closeUser.id , lat:users[index].lat , lon:users[index].lon , score:users[index].score , number:users[index].number});
 			}
@@ -128,7 +122,6 @@ io.on('connection' , function(socket){
 		console.log("fight called")
 
 		var pair = getDecidingPairById(data.id);
-		//console.log(pair);
 		if(pair!=null){
 	//the caller is stored as user1 in the pair
 			if(pair.user1.id==caller_id){
@@ -138,16 +131,13 @@ io.on('connection' , function(socket){
 					//remove the pair from deciding pairs
 					var index = deciding_pairs.indexOf(pair);
 					deciding_pairs.splice(index , 1);
-					//idle_pairs.push(pair);
 
 				}
-				//else update the status of the caller in deciding_pairs
+				//else update the status of the caller to fight in deciding_pairs
 				else{
 					var index = deciding_pairs.indexOf(pair);
-					//console.log(deciding_pairs);
 					deciding_pairs.splice(index , 1);
 					deciding_pairs.push({id:pair.id , user1:pair.user1 , user1_status:"fight" , user2:pair.user2 , user2_status:pair.user2_status});
-					console.log(deciding_pairs);
 				}
 
 			}
@@ -160,16 +150,12 @@ io.on('connection' , function(socket){
 					var index = deciding_pairs.indexOf(pair);
 					deciding_pairs.splice(index , 1);
 
-					//idle_pairs.push(pair);
 				}
 				//else update the status of the caller in deciding_pairs
 				else{
-					//console.log(deciding_pairs);
 					var index = deciding_pairs.indexOf(pair);
 					deciding_pairs.splice(index , 1);
 					deciding_pairs.push({id:pair.id , user1:pair.user1 , user1_status:pair.user1_status , user2:pair.user2 , user2_status:"fight"});
-					console.log(deciding_pairs);
-					//console.log(deciding_pairs);
 				}
 			}
 		
@@ -249,7 +235,7 @@ io.on('connection' , function(socket){
 
 })
 
-
+//calculates the distance between two {latitude , longitude} pairs
 function distance(lat1,lon1,lat2,lon2) {
   var R = 6371; // Radius of the earth in km
   var dLat = deg2rad(lat2-lat1);  // deg2rad below
@@ -261,13 +247,13 @@ function distance(lat1,lon1,lat2,lon2) {
     ; 
   var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
   var d = R * c; // Distance in km
-  return d*1000;	//distance in m
+  return d;	//distance in m
 }
 
 function deg2rad(deg) {
   return deg * (Math.PI/180)
 }
-
+//if an user called fight, checks which of the two players' score is less and decides a winner among them
 function decideWinner(pair){
 	var caller = pair.user1;
 	var opponent = pair.user2;
@@ -301,7 +287,7 @@ function decideWinner(pair){
 		
 	}
 }
-
+//if both user choose peace, send a peace event to both of them
 function makePeace(pair){
 	
 	var caller_id = pair.user1.id;
@@ -316,21 +302,19 @@ function makePeace(pair){
 	console.log('peace made')
 
 }
-
+//stores the pairs that have chosen peace. They are not considered for fight next time unless they move apart from each other
 function idleUser(user1 , user2){
 	for(var i=0;i<idle_pairs.length;i++){
 		if(idle_pairs[i].user1==user1 && idle_pairs[i].user2==user2){
-			console.log("return true")
 			return true;
 		}
 		else if(idle_pairs[i].user1==user2 && idle_pairs[i].user2==user1){
-			console.log("return true")
 			return true;
 		}
 	}
 	return false;
 }
-
+//randomly selects a user and sends him a bonus after a certain time
 function chooseTechExplosion()
 {
 	if(users.length<=0)
@@ -340,10 +324,9 @@ function chooseTechExplosion()
 	users[winner].score+=5;
     var winner_socket = getSocketById(users[winner].id);
 	winner_socket.con.emit('tech explosion');
-	//console.log("tech explosion called");
     
 }
-
+//check if any other user is close to the current user
 function isClose(user){
 	var closeUser = null;
 	for(var k=0;k<users.length ;k++){
@@ -396,7 +379,7 @@ function getSocketById(id){
     }
     return socket;
 }
-
+//increase the score of all users periodically
 function increaseScore(){
 	for(var i=0;i<users.length;i++){
 		users[i].score+=1;
@@ -415,5 +398,3 @@ function checkIdlePairs(){
 }
 setInterval(chooseTechExplosion, 60000);
 setInterval(increaseScore , 1000);
-//setInterval(checkIdlePairs , 5000);
-//setInterval(increaseScore , 2000);
