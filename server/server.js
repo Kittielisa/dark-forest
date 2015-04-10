@@ -18,7 +18,9 @@ app.get('/*.*' , function(req , res , next){
 
 
 
-var playerCount = 1;
+var playerCount = 0;
+var totalPlayers = 0;
+var firstTime = true;
 var users = [];	//keep track of all the online users
 var sockets = [];
 var deciding_pairs = [];
@@ -39,12 +41,18 @@ io.on('connection' , function(socket){
 	            return v.toString(16);
 	            //alert(unique_url);
 	        });
+
 	//push the new user to users array
 	users.push({id:uniqueId , lat:0 , lon:0 , score:0 , number:playerCount++});
 	//push the newly created socket to sockets array
 	sockets.push({id:uniqueId , con:socket , status:'open'});
+
+	if(playerCount>3)
+		firstTime = false;
+	if(totalPlayers<0)
+		totalPlayers=0;
 	//allow all online users to know that a new user has joined
-	io.emit('new user' , {online : users.length-1});
+	io.emit('new user' , {online : totalPlayers++});
 	//send the unique id to the newly joining user
 	socket.emit('welcome' , {id:uniqueId});
 
@@ -58,22 +66,18 @@ io.on('connection' , function(socket){
 		index = sockets.indexOf(disconnect_socket);
 		sockets.splice(index,1);
 
+		--totalPlayers;
+
 		io.emit('user disconnected');
 		socket.disconnect();
 	})
 
-	socket.on('pause' , function(data){
-		var s = sockets.indexOf(socket);
-		sockets[s].status = 'pause';
-	})
-
-	socket.on('unpause' , function(data){
-		var s = sockets.indexOf(socket);
-		sockets[s].status = 'open';
-	})
 	//fires when a user location change event is detected
 	socket.on('location change' , function(data){
 		console.log("location change received")
+
+		if(firstTime)
+			return;
 		//get the data of the user
 		var user = getUserById(data.id);
 		var index = users.indexOf(user);
@@ -81,13 +85,20 @@ io.on('connection' , function(socket){
 		users[index].lon = data.lon;
 		//check if any user is within the war zone
 		var closeUser = isClose(users[index]);
+
+
+		//console.log(sockets)
 		//if there is no user in the war zone, do nothing
 		if(closeUser==null){
+			return;
+		}
+		else if(sockets[sockets.indexOf(getSocketById(closeUser.id))].status=='dead' || sockets[sockets.indexOf(getSocketById(users[index].id))].status=='dead'){
 			return;
 		}
 		//else if a user is found close enough and the pair is not in idleUsers
 		else if(closeUser.id!=data.id && !idleUser(closeUser , users[index]) ){
 			var exist = false;
+
 			//check if one of them is already not in the deciding pairs
 			for (var i = deciding_pairs.length - 1; i >= 0; i--) {
 				if(deciding_pairs[i].user1==closeUser || deciding_pairs[i].user2==users[index] || deciding_pairs[i].user2==closeUser || deciding_pairs[i].user1==users[index]){
@@ -128,6 +139,7 @@ io.on('connection' , function(socket){
 				//if the other user chose to fight
 				if(pair.user2_status!="open"){
 					decideWinner(pair);
+					--totalPlayers;
 					//remove the pair from deciding pairs
 					var index = deciding_pairs.indexOf(pair);
 					deciding_pairs.splice(index , 1);
@@ -146,6 +158,7 @@ io.on('connection' , function(socket){
 				//if the other user chose to fight
 				if(pair.user1_status!="open"){
 					decideWinner(pair);
+					--totalPlayers;
 					//remove the pair from deciding pairs
 					var index = deciding_pairs.indexOf(pair);
 					deciding_pairs.splice(index , 1);
@@ -174,7 +187,8 @@ io.on('connection' , function(socket){
 
 		var pair = getDecidingPairById(data.id);
 
-		
+		if(pair==null)
+			return;
 		//the caller is stored as user1 in the pair
 		if(pair.user1.id==caller_id){
 			//if the other user chose to fight
@@ -268,8 +282,20 @@ function decideWinner(pair){
 
 		opponent.score+=caller.score;
 
-		caller_socket.con.disconnect();
-		
+		sockets[sockets.indexOf(caller_socket)].status = 'dead'
+		//caller_socket.con.disconnect();
+		if(totalPlayers==2){
+			io.emit('winner' , {number:opponent.number , id:opponent.id});
+			console.log('winner')
+			
+			for(var i=0;i<sockets.length;i++)
+				sockets[i].con.disconnect();
+
+
+			totalPlayers = 0;
+			playerCount = 0;
+			firstTime = true;
+		}
 		
 
 	}
@@ -278,14 +304,27 @@ function decideWinner(pair){
 		var opp_socket = getSocketById(opponent_id);
 
 		opp_socket.con.emit('loss');
-		opp_socket.con.disconnect();
-		
+		//opp_socket.con.disconnect();
+		sockets[sockets.indexOf(opp_socket)].status = 'dead'
 		caller_socket.con.emit('win' , {score:caller.score});
 
 		caller.score+=opponent.score;
 
+		//caller_socket.con.disconnect();
+		if(totalPlayers<=2){
+			io.emit('winner' , {number:caller.number , id:caller.id});
+			console.log('winner')
+			for(var i=0;i<sockets.length;i++)
+				sockets[i].con.disconnect();
+
+			totalPlayers = 0;
+			playerCount = 0;
+			firstTime = true;
+
+		}
 		
 	}
+	
 }
 //if both user choose peace, send a peace event to both of them
 function makePeace(pair){
@@ -323,7 +362,8 @@ function chooseTechExplosion()
 	var winner = Math.floor(Math.random()*(users.length));
 	users[winner].score+=5;
     var winner_socket = getSocketById(users[winner].id);
-	winner_socket.con.emit('tech explosion');
+    if(winner_socket.status=='open')
+		winner_socket.con.emit('tech explosion');
     
 }
 //check if any other user is close to the current user
@@ -382,6 +422,8 @@ function getSocketById(id){
 //increase the score of all users periodically
 function increaseScore(){
 	for(var i=0;i<users.length;i++){
+		if(sockets[i].status=='dead')
+			return;
 		users[i].score+=1;
 		sockets[i].con.emit('score update' , {id:users[i].id , score:users[i].score});
 	}

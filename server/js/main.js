@@ -4,7 +4,7 @@ var stry=0;
 var crdts=0;
 var firstTime = true;
 var enemy=false;
-
+var winner = 0;
 /*
   The main class is DarkForest. It contains all the visual elements and game logic
   For reference : http://www.smashingmagazine.com/2012/10/19/design-your-own-mobile-game/
@@ -76,7 +76,12 @@ var DarkForest = {
           DarkForest.menu.active = false;
         }
 
-        //if menu is clicked, push a new instance of menu in the entities
+        if(DarkForest.Winner.active){
+          DarkForest.entities.push(new DarkForest.Winner());
+          DarkForest.Winner.active = false;
+          DarkForest.Loss.remove = true;
+        }
+
         if(DarkForest.locationError.active){
           DarkForest.entities.push(new DarkForest.locationError());
           DarkForest.locationError.active = false;
@@ -495,17 +500,17 @@ DarkForest.Loss = function(){
     DarkForest.Draw.text("Your civilization has been ",10,DarkForest.height/4+50,14,'white')
     DarkForest.Draw.text("destroyed. We are looking forward ",10,DarkForest.height/4+70,14,'white')
     DarkForest.Draw.text("to see you again ",10,DarkForest.height/4+90,14,'white')
-	DarkForest.Draw.text("Your Score Is "+DarkForest.score.score,10,DarkForest.height/4+110,14,'white')
-	DarkForest.Draw.text("Killed number Is "+DarkForest.score.killed,10,DarkForest.height/4+130,14,'white')
-    
-	var StartOver = new DarkForest.StartOver(self , "start Over" , 8 , DarkForest.height/4+120 ,DarkForest.width-16 ,40 , '#D32B2F');
-      StartOver.handler = function(){
-	 
-        location.reload();
+  	DarkForest.Draw.text("Your Score Is "+DarkForest.score.score,10,DarkForest.height/4+110,14,'white')
+  	DarkForest.Draw.text("Killed number Is "+DarkForest.score.killed,10,DarkForest.height/4+130,14,'white')
+      if(this.time<2){
+         var StartOver = new DarkForest.StartOver(self , "start Over" , 8 , DarkForest.height/4+120 ,DarkForest.width-16 ,40 , '#D32B2F');
+          StartOver.handler = function(){
+       
+            location.reload();
+          }
+          DarkForest.entities.push(StartOver);
       }
-      DarkForest.entities.push(StartOver);
-	
-	//paint_centered_wrap(DarkForest.canvas, 20, DarkForest.height/4, DarkForest.width-40, DarkForest.height/4, "Your civilization #001 has been destroyed. We are looking forward to see you again.", 12, 2);
+ 
 
   };
 }
@@ -1497,6 +1502,26 @@ DarkForest.locationError = function(){
   };
 }
 
+DarkForest.Winner = function(){
+  this.time = 0;
+  this.active = false;
+  this.remove = false;
+  this.update = function(){
+      this.time++;
+      
+  }
+  this.render = function() {
+    //Draw the header
+    DarkForest.Draw.rect(5,DarkForest.height/4,DarkForest.width-10,30,'#312A2A');
+    DarkForest.Draw.text("Winner",DarkForest.width/2-90,DarkForest.height/4+15,16,'red')
+    //Draw the body
+    DarkForest.Draw.rect(5,DarkForest.height/4+30,DarkForest.width-10,85,'#5A5959');
+    DarkForest.Draw.text("Civilization "+winner+" is the strongest",10,DarkForest.height/4+50,14,'white')
+    DarkForest.Draw.text("civilization in the universe",10,DarkForest.height/4+70,14,'white')
+
+  };
+}
+
 
 /////////////////////////////////////////////////////////////
 
@@ -1546,7 +1571,7 @@ function distance(lat1,lon1,lat2,lon2) {
     ; 
   var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
   var d = R * c; // Distance in km
-  return d*1000; //distance in m
+  return d; //distance in m
 }
 
 function deg2rad(deg) {
@@ -1580,7 +1605,7 @@ getLocation = function(){
     var lat =  position.coords.latitude;
     var lon =  position.coords.longitude;
 
-    if(distance(lat , lon , 40.692206, -73.963042)<160){
+    if(distance(lat , lon , 40.692206, -73.963042)<16000000000000000000){
           socket = io.connect('/');
 
         //receive your random id from server
@@ -1599,8 +1624,8 @@ getLocation = function(){
         //if a user leavers
         socket.on('user disconnected', function(data){
           console.log("user disconnected");
-          User.userLeft();
-          DarkForest.score.totalOnline--;
+          //User.userLeft();
+          //DarkForest.score.totalOnline--;
         });
 
           //periodically receive score updates
@@ -1623,6 +1648,7 @@ getLocation = function(){
           socket.on('loss' , function(data){
              enemy=false;
               DarkForest.Loss.active = true;
+              DarkForest.score.totalOnline--;
           })
           //if the user wins a fight, display win popup
 
@@ -1632,6 +1658,8 @@ getLocation = function(){
               DarkForest.score.score+=data.score;
               DarkForest.score.killed++;
               DarkForest.Win.active = true;
+              DarkForest.score.totalOnline--;
+
           });
           //if both user choose peace, show peace popup
           socket.on('peace' , function(data){
@@ -1643,6 +1671,13 @@ getLocation = function(){
               User.increaseScore(5);
               DarkForest.score.score+=5;
               DarkForest.TechnologyExplosion.active = true;
+          })
+
+          socket.on('winner' , function(data){
+            DarkForest.Winner.active = true;
+            winner.number = data.number;
+            winner.id = data.id
+
           })
           
         }else{
